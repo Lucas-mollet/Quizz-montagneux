@@ -83,7 +83,7 @@
         .duplicate-badge { position: absolute; bottom: 15px; right: 15px; background: #2e7d32; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; }
         .card.animal .duplicate-badge { background: #e53935; }
 
-        /* --- TRÉSORERIE & MAGASIN --- */
+        /* --- ÉCHANGE & MAGASIN --- */
         .shop-section { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-top: 20px; }
         .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
         .shop-item { background: #f9f9f9; border: 2px solid #eee; border-radius: 10px; padding: 15px; cursor: pointer; transition: 0.3s; display: flex; flex-direction: column; align-items: center;}
@@ -190,7 +190,7 @@
             </div>
 
             <div id="bag-container" class="sac-box hidden">
-                <div><h3 style="margin:0; color:#333;">🎒 Sac d'expédition (Niveau)</h3><p style="margin:5px 0 0 0; font-size:14px; font-weight:bold; color:#555;">Contient 2 plantes et 1 animal !</p></div>
+                <div><h3 style="margin:0; color:#333;">🎒 Sac d'expédition (Niveau)</h3><p style="margin:5px 0 0 0; font-size:14px; font-weight:bold; color:#555;">Contient 3 plantes et 2 animaux !</p></div>
                 <button class="btn-sac" onclick="openBag()">Ouvrir (<span id="count-sacs">0</span>)</button>
             </div>
 
@@ -224,7 +224,7 @@
                     
                     <div class="shop-item shop-item-sac" onclick="buyBag(30)">
                         <span class="shop-rarity" style="color:#333;">🎒 Sac d'expédition (Boutique)</span>
-                        <p style="margin:5px 0 0 0; font-size:12px; color:#555;">Contient 2 plantes et 1 animal !</p>
+                        <p style="margin:5px 0 0 0; font-size:12px; color:#555;">Contient 3 plantes et 2 animaux !</p>
                         <span class="shop-price" style="color:#333;">🪨 30</span>
                     </div>
                 </div>
@@ -282,14 +282,18 @@
 
         // Base de données des espèces à restaurer
         const recettes = [
-            { id: "P01", nom: "Pétasite Géant", latin: "Petasites hybridus", rarete: "Rare", desc: "Plante massive disparue des berges, ressuscitée grâce à vos Gentianes.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Petasites_hybridus_01.jpg/800px-Petasites_hybridus_01.jpg", requis: { "F04": 5 } },
-            { id: "P02", nom: "Pensée de Lapeyrouse", latin: "Viola lapeyrousiana", rarete: "Rare", desc: "Petite fleur mythique que l'on pensait éteinte depuis un siècle.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Viola_pyrenaica_1.jpg/800px-Viola_pyrenaica_1.jpg", requis: { "F23": 3 } },
-            { id: "P03", nom: "Astragale des Cimes", latin: "Astragalus alpinus", rarete: "Epique", desc: "Survivante de l'ère glaciaire, ramenée à la vie dans votre labo.", image: "https://upload.wikimedia.org/wikipedia/commons/b/b2/Astragalus_alpinus_01.JPG", requis: { "F02": 1, "F09": 5 } }
+            { id: "P01", type: "plante", nom: "Pétasite Géant", latin: "Petasites hybridus", rarete: "Rare", desc: "Plante massive disparue des berges, ressuscitée grâce à vos Gentianes.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Petasites_hybridus_01.jpg/800px-Petasites_hybridus_01.jpg", requis: { "F04": 5 } },
+            { id: "P02", type: "plante", nom: "Pensée de Lapeyrouse", latin: "Viola lapeyrousiana", rarete: "Rare", desc: "Petite fleur mythique que l'on pensait éteinte depuis un siècle.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Viola_pyrenaica_1.jpg/800px-Viola_pyrenaica_1.jpg", requis: { "F23": 3 } },
+            { id: "P03", type: "plante", nom: "Astragale des Cimes", latin: "Astragalus alpinus", rarete: "Epique", desc: "Survivante de l'ère glaciaire, ramenée à la vie dans votre labo.", image: "https://upload.wikimedia.org/wikipedia/commons/b/b2/Astragalus_alpinus_01.JPG", requis: { "F02": 1, "F09": 5 } },
+            { id: "A_MOUFLON", type: "animal", nom: "Mouflon méditerranéen", latin: "Ovis gmelini", rarete: "Epique", desc: "Réintroduit grâce à un croisement génétique audacieux !", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Ovis_orientalis_musimon_male.jpg/800px-Ovis_orientalis_musimon_male.jpg", requis: { "A02": 3, "A16": 1 } }
         ];
 
         try {
             inventaireJoueur = JSON.parse(localStorage.getItem("inventaire")) || [];
+            
+            // Migration invisible de l'ancien 'orJoueur' vers 'pierresJoueur' pour ne rien perdre
             pierresJoueur = JSON.parse(localStorage.getItem("pierresJoueur")) || JSON.parse(localStorage.getItem("orJoueur")) || 0;
+            
             grainesGagnees = JSON.parse(localStorage.getItem("grainesGagnees")) || 0;
             grainesPlantees = JSON.parse(localStorage.getItem("grainesPlantees")) || 0;
             animauxTires = JSON.parse(localStorage.getItem("animauxTires")) || 0;
@@ -443,6 +447,7 @@
             const isNew = !inventaireJoueur.includes(pendingSpecies.id);
             inventaireJoueur.push(pendingSpecies.id);
             
+            // LOGIQUE DES PIERRES DE TROC
             if(pendingSpecies.type === 'plante'){
                 const r = pendingSpecies.rarete.toLowerCase();
                 if(r.includes('legendaire')) pierresJoueur += 10;
@@ -453,7 +458,7 @@
             
             sauvegarderProgression();
             setTimeout(() => {
-                document.getElementById("reward-header-text").innerText = isNew ? "✨ Nouvelle découverte !" : "";
+                document.getElementById("reward-header-text").innerText = isNew ? "✨ Nouvelle découverte !" : "🔁 Doublon ! (+ Pierres)";
                 document.getElementById("btn-continue-reward").classList.remove("hidden");
             }, 800);
         }
@@ -481,14 +486,17 @@
         function buyBag(price) {
             if(pierresJoueur < price) { alert("Pas assez de pierres !"); return; }
             pierresJoueur -= price;
-            rewardQueue = [{type:'plante'}, {type:'plante'}, {type:'animal'}];
+            // 3 plantes et 2 animaux
+            rewardQueue = [{type:'plante'}, {type:'plante'}, {type:'plante'}, {type:'animal'}, {type:'animal'}];
             closeReward(); // Réinitialise et lance la file
         }
 
         function openBag() {
             const niv = Math.floor(grainesGagnees / 5);
             if (Math.floor(niv / 5) > sacsOuverts) {
-                sacsOuverts++; rewardQueue = [{type:'plante'}, {type:'plante'}, {type:'animal'}];
+                sacsOuverts++; 
+                // 3 plantes et 2 animaux
+                rewardQueue = [{type:'plante'}, {type:'plante'}, {type:'plante'}, {type:'animal'}, {type:'animal'}];
                 sauvegarderProgression(); closeReward();
             }
         }
@@ -521,23 +529,50 @@
         }
 
         function renderLaboratoire() {
-            const grid = document.getElementById("potions-grid"); 
-            grid.innerHTML = "";
-            recettes.forEach(r => {
+            const container = document.getElementById("potions-grid"); 
+            container.innerHTML = "";
+            
+            // Séparer les recettes en Plantes et Animaux
+            const plantesPerdues = recettes.filter(r => r.type === 'plante');
+            const animauxPerdus = recettes.filter(r => r.type === 'animal');
+
+            let html = ``;
+
+            html += `<h4 style="color:#2e7d32; border-bottom: 2px solid #e8f5e9; padding-bottom: 5px; grid-column: 1 / -1; margin-bottom: 0;">🌸 Espèces Végétales Perdues</h4>`;
+            plantesPerdues.forEach(r => {
                 const owned = inventaireJoueur.includes(r.id);
                 const canBrew = Object.keys(r.requis).every(reqId => inventaireJoueur.filter(id=>id===reqId).length >= r.requis[reqId]);
                 
-                grid.innerHTML += `
+                html += `
                 <div class="card" style="border-top: 5px solid #9c27b0;">
-                    <h3 style="color:#7b1fa2">${owned ? r.nom : "??? (Espèce Perdue)"}</h3>
+                    <h3 style="color:#7b1fa2">${owned ? r.nom : "??? (Espèce Végétale)"}</h3>
                     <p style="font-size:13px; color:#555; background:#f3e5f5; padding:8px; border-radius:5px;">
-                        Requis : ${Object.keys(r.requis).map(id => r.requis[id]+"x "+(fauneEtFlore.plantes.find(p=>p.id===id)?.nom || "Plante")).join(', ')}
+                        Requis : ${Object.keys(r.requis).map(id => r.requis[id]+"x "+(fauneEtFlore.plantes.find(p=>p.id===id)?.nom || fauneEtFlore.animaux.find(a=>a.id===id)?.nom || "Inconnu")).join(', ')}
                     </p>
                     <button class="btn-start" style="width:100%; margin-top:10px; padding:10px; font-size:14px; background:${canBrew && !owned ? '#9c27b0' : '#ccc'}; color:white; cursor:${canBrew && !owned ? 'pointer' : 'not-allowed'}; box-shadow:none;" ${canBrew && !owned ? "" : "disabled"} onclick="creerPotion('${r.id}')">
                         ${owned ? "Espèce Restaurée" : "Restaurer l'espèce"}
                     </button>
                 </div>`;
             });
+
+            html += `<h4 style="color:#e53935; border-bottom: 2px solid #ffebee; padding-bottom: 5px; grid-column: 1 / -1; margin-top: 20px; margin-bottom: 0;">🐾 Espèces Animales Perdues</h4>`;
+            animauxPerdus.forEach(r => {
+                const owned = inventaireJoueur.includes(r.id);
+                const canBrew = Object.keys(r.requis).every(reqId => inventaireJoueur.filter(id=>id===reqId).length >= r.requis[reqId]);
+                
+                html += `
+                <div class="card" style="border-top: 5px solid #e53935;">
+                    <h3 style="color:#b71c1c">${owned ? r.nom : "??? (Espèce Animale)"}</h3>
+                    <p style="font-size:13px; color:#555; background:#ffebee; padding:8px; border-radius:5px;">
+                        Requis : ${Object.keys(r.requis).map(id => r.requis[id]+"x "+(fauneEtFlore.animaux.find(a=>a.id===id)?.nom || fauneEtFlore.plantes.find(p=>p.id===id)?.nom || "Inconnu")).join(', ')}
+                    </p>
+                    <button class="btn-start" style="width:100%; margin-top:10px; padding:10px; font-size:14px; background:${canBrew && !owned ? '#e53935' : '#ccc'}; color:white; cursor:${canBrew && !owned ? 'pointer' : 'not-allowed'}; box-shadow:none;" ${canBrew && !owned ? "" : "disabled"} onclick="creerPotion('${r.id}')">
+                        ${owned ? "Espèce Restaurée" : "Restaurer l'espèce"}
+                    </button>
+                </div>`;
+            });
+
+            container.innerHTML = html;
         }
 
         function creerPotion(id) {
