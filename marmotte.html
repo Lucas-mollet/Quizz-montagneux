@@ -3,281 +3,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Fuite de la Marmotte - Tout Schuss !</title>
+    <title>La Fuite de la Marmotte : TOUT SCHUSS !</title>
     <style>
-        body { 
-            margin: 0; 
-            padding: 0; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            background-color: #87CEEB; 
-            font-family: 'Segoe UI', sans-serif;
-            overflow: hidden;
-        }
-        h1 { color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-        #gameCanvas {
-            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 60%, #FFFFFF 100%); /* Ciel vers neige */
-            border: 4px solid #333;
-            border-radius: 8px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            max-width: 100%;
-        }
-        #scoreBoard {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
-        }
-        #gameOverScreen {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255,255,255,0.95);
-            padding: 30px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            display: none;
-        }
+        body { margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #111; font-family: 'Segoe UI', sans-serif; overflow: hidden; color: white;}
+        #gameContainer { position: relative; width: 800px; height: 450px; overflow: hidden; border: 4px solid #333; background: #000; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        #gameCanvas { background: #8ecae6; display: block; width: 100%; height: 100%; }
+        #scoreBoard { position: absolute; top: 10px; left: 10px; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 0 #000; z-index: 5;}
+        
+        /* Vidéo Intro */
+        #videoContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 20; display: flex; flex-direction: column; }
+        #introVideo { width: 100%; height: 100%; object-fit: cover; }
+        .btn-skip { position: absolute; bottom: 15px; right: 15px; padding: 8px 15px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer; z-index: 21; transition: 0.2s;}
+        .btn-skip:hover { background: rgba(255,255,255,0.2); }
+
+        /* Écrans overlay */
+        #overlayScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; display: none; z-index: 15; }
+        #overlayScreen h2 { color: #e74c3c; font-size: 32px; margin: 0 0 10px 0; }
+        .btn-play { padding: 10px 20px; background: #2ecc71; color: white; border: none; border-radius: 4px; font-size: 18px; cursor: pointer; font-weight: bold;}
+        .btn-play:hover { background: #27ae60; }
     </style>
 </head>
 <body>
 
-    <h1>⛷️ La Marmotte Tout Schuss !</h1>
-    <div id="scoreBoard">Score : <span id="score">0</span></div>
-    
-    <canvas id="gameCanvas" width="800" height="300"></canvas>
-    
-    <div id="gameOverScreen">
-        <h2 style="color: #c62828;">Aïe, attrapée par l'aigle !</h2>
-        <p>Score final : <span id="finalScore">0</span></p>
-        <button style="padding:10px 20px; font-size:18px; cursor:pointer; background:#2e7d32; color:white; border:none; border-radius:8px;" onclick="resetGame()">Rejouer</button>
+    <div id="gameContainer">
+        <div id="videoContainer">
+            <video id="introVideo" controls>
+                <source src="ta-video-ici.mp4" type="video/mp4">
+            </video>
+            <button class="btn-skip" onclick="skipVideo()">Passer ➔</button>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="450"></canvas>
+        <div id="scoreBoard">Distance: <span id="score">0</span>m</div>
+        
+        <div id="overlayScreen">
+            <h2 id="overlayTitle">L'AIGLE T'A EU !</h2>
+            <p>Score : <span id="finalScore">0</span>m</p>
+            <button class="btn-play" onclick="resetGame()">RECHARGER</button>
+        </div>
     </div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Paramètres de perspective pour la pente
-        const HORIZON_Y = 120; // Plus bas pour plus de pente
-        const CAMERA_Y = 220; // Caméra plus haute
+        // --- GESTION DES IMAGES ---
+        const imgMarmotte = new Image();
+        const imgAigle = new Image();
+
+        // ⚠️ Vérifie majuscules/minuscules !
+        imgMarmotte.src = "marmotte.png"; 
+        imgAigle.src = "aigle.png";
+
+        let imagesLoaded = { marmotte: false, aigle: false };
+        imgMarmotte.onload = () => { imagesLoaded.marmotte = true; console.log("Marmotte chargée !"); };
+        imgAigle.onload = () => { imagesLoaded.aigle = true; console.log("Aigle chargé !"); };
+
+        // --- PARAMÈTRES PENTE EXTRÊME ---
+        const FOV = 250; 
+        const HORIZON_Y = 50; // Plus bas = Pente vertigineuse
+        const CAMERA_Y = 400; // Caméra plus haute pour écraser la perspective
+        const WORLD_WIDTH = 1400; 
         
-        // Variables du jeu
+        let state = 'VIDEO'; 
         let frames = 0;
         let score = 0;
-        let gameSpeed = 5;
-        let isGameOver = false;
-
-        // --- CHARGEMENT DES IMAGES (C'est ici que tu dois t'assurer d'avoir de VRAIS fichiers) ---
-        const imgMarmotte = new Image();
-        imgMarmotte.src = "marmotte.png"; // Assure-toi que c'est un VRAI fichier PNG
         
-        const imgAigle = new Image();
-        imgAigle.src = "aigle.png"; // Assure-toi que tu as aussi un fichier pour l'aigle
-
-        // Tableau pour stocker les particules de neige
-        let snowParticles = [];
-
-        // La Marmotte de face sur skis
-        const marmotte = {
-            x: 50,
-            y: HORIZON_Y + 50, // Placer la marmotte sur le sol, plus bas
-            size: 60, // Taille un peu plus grande pour les skis
-            dy: 0,
-            jumpForce: 18, // Sauts durent plus longtemps (force augmentée)
-            grounded: false,
-        };
-
-        const gravity = 0.4; // Gravité diminuée pour que les sauts durent plus longtemps
+        let targetSpeed = 35; 
+        let currentSpeed = 35;
+        let eagleDanger = 0; 
+        
+        // --- ENTITÉS ---
+        let player = { x: 0, dx: 0, acc: 2, friction: 0.9, y: 0, vy: 0, z: 150, grounded: true };
+        let eagle = { x: 0, y: -400, z: 600 }; 
         let obstacles = [];
+        let particles = [];
 
-        // Écouteurs pour sauter (Espace ou clic sur l'écran)
-        window.addEventListener('keydown', function (e) {
-            if (e.code === 'Space') {
-                if (isGameOver) resetGame();
-                else jump();
-            }
+        // --- CONTRÔLES ---
+        let keys = { left: false, right: false };
+        window.addEventListener('keydown', e => {
+            if (state !== 'PLAY') return;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'Space' || e.code === 'ArrowUp') jump();
         });
-        canvas.addEventListener('touchstart', function() {
-            if (isGameOver) resetGame();
-            else jump();
+        window.addEventListener('keyup', e => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
         });
-        canvas.addEventListener('mousedown', function() {
-            if (isGameOver) resetGame();
-            else jump();
-        });
-
-        function jump() {
-            if (marmotte.grounded) {
-                marmotte.dy = -marmotte.jumpForce;
-                marmotte.grounded = false;
-            }
+        
+        function jump() { 
+            if (player.grounded) { 
+                player.vy = -26; // Impulsion plus forte pour saut long
+                player.grounded = false; 
+            } 
         }
 
-        // --- Gestion des particules de neige ---
-        function handleSnow() {
-            // Si la marmotte est au sol, générer de la neige derrière les skis
-            if (marmotte.grounded) {
-                for (let i = 0; i < 3; i++) { // Générer 3 particules par frame
-                    snowParticles.push({
-                        x: marmotte.x + marmotte.size / 2 + (Math.random() - 0.5) * 10, // Juste derrière les skis
-                        y: marmotte.y + marmotte.size - 5, // Au niveau du sol
-                        vx: (Math.random() - 0.5) * 2, // Vitesse x aléatoire
-                        vy: -Math.random() * 2 - 1, // Vitesse y vers le haut
-                        size: Math.random() * 3 + 1, // Petite taille aléatoire
-                        life: 30, // Durée de vie en frames
-                    });
+        function skipVideo() {
+            document.getElementById("introVideo").pause();
+            document.getElementById("videoContainer").style.display = "none";
+            resetGame();
+        }
+
+        // --- MATHS 3D ---
+        function project(x, y, z) {
+            if (z < 1) z = 1;
+            const scale = FOV / (FOV + z);
+            const projX = (canvas.width / 2) + (x * scale);
+            const projY = HORIZON_Y + ((y + CAMERA_Y) * scale);
+            return { x: projX, y: projY, scale: scale };
+        }
+
+        // --- DÉCOR ---
+        function drawBackground() {
+            let skyGradient = ctx.createLinearGradient(0, 0, 0, HORIZON_Y);
+            skyGradient.addColorStop(0, '#1a75ff'); skyGradient.addColorStop(1, '#8ecae6');
+            ctx.fillStyle = skyGradient; ctx.fillRect(0, 0, canvas.width, HORIZON_Y);
+
+            ctx.fillStyle = "#4f6c8c"; 
+            ctx.beginPath(); ctx.moveTo(0, HORIZON_Y); ctx.lineTo(150, 10); ctx.lineTo(300, 40); ctx.lineTo(450, 5); ctx.lineTo(600, 30); ctx.lineTo(750, 15); ctx.lineTo(800, HORIZON_Y); ctx.fill();
+        }
+
+        function drawGround() {
+            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, HORIZON_Y, canvas.width, canvas.height - HORIZON_Y);
+            
+            // Lignes de fuite accentuées pour la vitesse
+            ctx.strokeStyle = "rgba(200, 220, 240, 0.8)"; 
+            ctx.lineWidth = 2;
+            for(let i = -8; i <= 8; i++) {
+                let start = project(i * 200, 0, 0);
+                let end = project(i * 200, 0, 3000);
+                if(start.y > HORIZON_Y) { 
+                    ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke(); 
                 }
             }
-
-            // Mettre à jour et dessiner les particules
-            for (let i = 0; i < snowParticles.length; i++) {
-                let p = snowParticles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.vy += 0.05; // Un peu de gravité pour la neige qui retombe
-                p.life--;
-
-                // Dessiner la particule (cercle blanc)
-                ctx.fillStyle = "white";
-                ctx.globalAlpha = p.life / 30; // Opacité diminue avec le temps
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1; // Restaurer l'opacité
-            }
-
-            // Supprimer les particules mortes
-            snowParticles = snowParticles.filter(p => p.life > 0);
         }
 
-        function drawEntities() {
-            marmotte.dy += gravity;
-            marmotte.y += marmotte.dy;
-
-            // Collision avec le sol (Le sol vert commence à HORIZON_Y)
-            if (marmotte.y + marmotte.size >= HORIZON_Y + 50) {
-                marmotte.y = (HORIZON_Y + 50) - marmotte.size;
-                marmotte.dy = 0;
-                marmotte.grounded = true;
-            }
-
-            // --- Dessiner la marmotte ---
-            // Tenter de dessiner l'image
-            if (imgMarmotte.complete && imgMarmotte.naturalWidth > 0) {
-                ctx.drawImage(imgMarmotte, marmotte.x, marmotte.y, marmotte.size, marmotte.size);
-            } else {
-                // Fallback (emoji) si l'image ne charge pas
-                ctx.font = "60px Arial";
-                ctx.fillText("🦫⛷️", marmotte.x, marmotte.y + marmotte.size); // Emoji marmotte + skis
+        // --- PARTICULES (Neige des skis et Terre) ---
+        function addSnowParticles(isDirt) {
+            let count = isDirt ? 3 : 1; // Plus de particules si c'est de la terre
+            for(let i=0; i<count; i++) {
+                // Alterner entre le ski gauche (-20) et le ski droit (+20)
+                let skiOffset = Math.random() > 0.5 ? 25 : -25;
+                particles.push({
+                    x: player.x + skiOffset + (Math.random()*10 - 5),
+                    y: 0, 
+                    z: player.z + 20, 
+                    size: 2 + Math.random()*4,
+                    vx: -player.dx*0.1 + (Math.random()-0.5)*3, 
+                    vy: -1 - Math.random()*3,
+                    color: isDirt ? "#713F12" : "#ffffff", 
+                    alpha: 1
+                });
             }
         }
 
-        // --- Dessiner le décor de pente ---
-        function drawScene() {
-            // Ciel
-            ctx.fillStyle = "#87CEEB";
-            ctx.fillRect(0, 0, canvas.width, HORIZON_Y);
-
-            // Neige de la pente (dégradé pour plus de profondeur)
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillRect(0, HORIZON_Y, canvas.width, canvas.height - HORIZON_Y);
-
-            // "Rayures" du sol pour l'effet de vitesse et de perspective
-            ctx.fillStyle = "#F0F8FF"; // Bleu très pâle
-            const stripeWidth = 50;
-            const stripeGap = 50;
-            let stripeOffset = (frames * gameSpeed) % (stripeWidth + stripeGap);
-            for (let y = HORIZON_Y; y < canvas.height; y += stripeGap) {
-                ctx.fillRect(0, y + stripeOffset, canvas.width, stripeWidth);
+        function drawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.alpha -= 0.05;
+                if(p.alpha <= 0 || p.y > 0) { particles.splice(i, 1); continue; }
+                
+                let proj = project(p.x, p.y, p.z);
+                ctx.fillStyle = p.color; ctx.globalAlpha = p.alpha;
+                ctx.beginPath(); ctx.arc(proj.x, proj.y, p.size * proj.scale, 0, Math.PI * 2); ctx.fill();
             }
+            ctx.globalAlpha = 1;
         }
 
+        // --- MÉCANIQUE ---
         function handleObstacles() {
-            // Apparition aléatoire
-            if (frames % 90 === 0) {
-                let type = Math.random() > 0.5 ? "rock" : "eagle";
+            if (frames % 20 === 0) {
+                let rand = Math.random();
+                let type = "tree";
+                if (rand > 0.4) type = "rock";
+                if (rand > 0.6) type = "grass"; 
+
                 obstacles.push({
-                    x: canvas.width,
-                    y: type === "rock" ? (HORIZON_Y + 45) : (HORIZON_Y - 30), // Rocher au sol, aigle en l'air
-                    size: type === "rock" ? 35 : 45, // Aigle un peu plus grand
-                    type: type
+                    x: -WORLD_WIDTH/2 + Math.random() * WORLD_WIDTH,
+                    y: 0, z: 2500, type: type,
+                    width: type === "tree" ? 160 : (type === "grass" ? 280 : 100),
+                    height: type === "tree" ? 280 : (type === "grass" ? 10 : 80)
                 });
             }
 
-            for (let i = 0; i < obstacles.length; i++) {
+            let onGrass = false;
+            for (let i = obstacles.length - 1; i >= 0; i--) {
                 let obs = obstacles[i];
-                obs.x -= gameSpeed;
-
-                // Tenter de dessiner l'image de l'obstacle
-                if (obs.type === "eagle" && imgAigle.complete && imgAigle.naturalWidth > 0) {
-                    ctx.drawImage(imgAigle, obs.x, obs.y, obs.size, obs.size);
-                } else if (obs.type === "eagle") {
-                    // Fallback (emoji) pour l'aigle
-                    ctx.font = "45px Arial";
-                    ctx.fillText("🦅", obs.x, obs.y + obs.size);
-                } else {
-                    // Rocher (emoji)
-                    ctx.font = "35px Arial";
-                    ctx.fillText("🪨", obs.x, obs.y + obs.size);
+                obs.z -= currentSpeed;
+                if (obs.z > player.z - 30 && obs.z < player.z + 30) {
+                    if (player.x > obs.x - obs.width/2 && player.x < obs.x + obs.width/2) {
+                        if (obs.type === "tree") gameOver();
+                        else if (obs.type === "rock" && player.y > -70) gameOver();
+                        else if (obs.type === "grass" && player.grounded) onGrass = true;
+                    }
                 }
-
-                // Détection de collision simple (carré contre carré)
-                if (marmotte.x < obs.x + obs.size - 10 && 
-                    marmotte.x + marmotte.size - 10 > obs.x && 
-                    marmotte.y < obs.y + obs.size - 10 && 
-                    marmotte.y + marmotte.size - 10 > obs.y) {
-                    isGameOver = true;
-                }
+                if (obs.z < 0) obstacles.splice(i, 1);
             }
 
-            // Supprime les obstacles passés pour libérer la mémoire
-            obstacles = obstacles.filter(obs => obs.x + obs.size > 0);
+            if (onGrass) {
+                currentSpeed = Math.max(12, currentSpeed - 2); 
+                eagleDanger = Math.min(100, eagleDanger + 1.5); 
+                addSnowParticles(true); // Terre qui vole
+            } else {
+                currentSpeed = Math.min(targetSpeed, currentSpeed + 0.5); 
+                eagleDanger = Math.max(0, eagleDanger - 0.3); 
+                if(player.grounded) addSnowParticles(false); // Neige en continu
+            }
+            if (eagleDanger >= 100) gameOver(); 
         }
 
-        function updateGame() {
-            if (isGameOver) {
-                document.getElementById("gameOverScreen").style.display = "block";
-                document.getElementById("finalScore").innerText = score;
-                return;
-            }
+        // --- DESSIN DES ENTITÉS ---
+        function drawEntities() {
+            let renderList = [];
+            obstacles.forEach(obs => renderList.push({ ...obs, isObstacle: true }));
+            renderList.push({ x: player.x, y: player.y, z: player.z, width: 90, height: 90, isPlayer: true });
 
+            eagle.x = player.x + Math.sin(frames*0.02)*150; 
+            eagle.z = player.z + 300 - (eagleDanger * 2.5); 
+            eagle.y = -300 + (eagleDanger * 2.5); 
+            renderList.push({ x: eagle.x, y: eagle.y, z: eagle.z, width: 250, height: 120, isEagle: true });
+
+            renderList.sort((a, b) => b.z - a.z); 
+
+            renderList.forEach(item => {
+                if (item.z <= 0) return;
+                let p = project(item.x, item.y, item.z);
+                let vw = item.width * p.scale; let vh = item.height * p.scale;
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+
+                if (item.isObstacle) {
+                    if (item.type === "tree") {
+                        ctx.fillStyle = "#5d4037"; ctx.fillRect(-vw*0.1, -vh, vw*0.2, vh);
+                        ctx.fillStyle = "#064e3b"; ctx.beginPath(); ctx.moveTo(0,-vh); ctx.lineTo(-vw/2,-vh*0.2); ctx.lineTo(vw/2,-vh*0.2); ctx.fill(); 
+                    } else if (item.type === "rock") {
+                        ctx.fillStyle = "#7f8c8d"; ctx.beginPath(); ctx.moveTo(-vw/2,0); ctx.lineTo(-vw/4,-vh); ctx.lineTo(vw/4,-vh); ctx.lineTo(vw/2,0); ctx.fill();
+                    } else if (item.type === "grass") {
+                        ctx.fillStyle = "#556b2f"; ctx.beginPath(); ctx.ellipse(0, 0, vw/2, vh*2, 0, 0, Math.PI*2); ctx.fill();
+                    }
+                }
+
+                if (item.isPlayer) {
+                    // Les skis
+                    ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = vw*0.12; ctx.lineCap="round";
+                    ctx.beginPath(); ctx.moveTo(-vw*0.3, 0); ctx.lineTo(-vw*0.4, vh*0.4); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(vw*0.3, 0); ctx.lineTo(vw*0.4, vh*0.4); ctx.stroke();
+                    
+                    if (imagesLoaded.marmotte) {
+                        ctx.drawImage(imgMarmotte, -vw/2, -vh, vw, vh);
+                    } else {
+                        // Remplacement si image introuvable (cercle marron)
+                        ctx.fillStyle = "#8e6e46"; ctx.beginPath(); ctx.arc(0, -vh/2, vw/2, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle="white"; ctx.font="12px Arial"; ctx.fillText("404", -10, -vh/2);
+                    }
+                }
+
+                if (item.isEagle) {
+                    if (imagesLoaded.aigle) {
+                        ctx.drawImage(imgAigle, -vw/2, -vh/2, vw, vh);
+                    } else {
+                        ctx.fillStyle = "#222"; ctx.fillRect(-vw/2, -vh/2, vw, vh); 
+                    }
+                    ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(0, -item.y * p.scale, vw*0.4, vw*0.1, 0, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.restore();
+            });
+        }
+
+        // --- LOGIQUE ---
+        function updateGame() {
+            if (state !== 'PLAY') return;
+            frames++;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            drawScene();
-            handleSnow(); // Gérer la neige d'abord
-            drawEntities(); // Dessiner la marmotte ensuite
-            handleObstacles();
-
-            score++;
-            document.getElementById("score").innerText = Math.floor(score / 10);
+            if (keys.left) player.dx -= player.acc;
+            if (keys.right) player.dx += player.acc;
+            player.dx *= player.friction; player.x += player.dx;
             
-            // Accélération légère
-            if(score % 500 === 0) gameSpeed += 0.5;
+            player.x = Math.max(-WORLD_WIDTH/2, Math.min(WORLD_WIDTH/2, player.x));
 
-            frames++;
+            player.y += player.vy;
+            if (!player.grounded) { 
+                player.vy += 1.1; // Gravité plus faible = saut qui dure plus longtemps
+                if (player.y >= 0) { player.y = 0; player.grounded = true; player.vy = 0; } 
+            }
+
+            score += (currentSpeed / 10);
+            document.getElementById("score").innerText = Math.floor(score);
+
+            drawBackground();
+            drawGround();
+            handleObstacles();
+            drawParticles();
+            drawEntities();
+            
             requestAnimationFrame(updateGame);
         }
 
+        function gameOver() {
+            state = 'GAMEOVER';
+            document.getElementById("overlayScreen").style.display = "flex";
+            document.getElementById("finalScore").innerText = Math.floor(score);
+        }
+
         function resetGame() {
-            marmotte.y = HORIZON_Y + 50;
-            marmotte.dy = 0;
-            obstacles = [];
-            snowParticles = []; // Réinitialiser la neige
-            score = 0;
-            frames = 0;
-            gameSpeed = 5;
-            isGameOver = false;
-            document.getElementById("gameOverScreen").style.display = "none";
+            state = 'PLAY'; frames = 0; score = 0; currentSpeed = 35; eagleDanger = 0;
+            obstacles = []; particles = []; player.x = 0; player.y = 0; player.dx = 0;
+            document.getElementById("overlayScreen").style.display = "none";
             updateGame();
         }
 
-        // Lancement du jeu au démarrage
-        updateGame();
+        requestAnimationFrame(updateGame);
 
     </script>
 </body>
