@@ -13,12 +13,14 @@
         /* Vidéo Intro */
         #videoContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 20; display: flex; flex-direction: column; }
         #introVideo { width: 100%; height: 100%; object-fit: cover; }
-        .btn-skip { position: absolute; bottom: 15px; right: 15px; padding: 8px 15px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer; z-index: 21; }
+        .btn-skip { position: absolute; bottom: 15px; right: 15px; padding: 8px 15px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer; z-index: 21; transition: 0.2s;}
+        .btn-skip:hover { background: rgba(255,255,255,0.2); }
 
         /* Écrans overlay */
         #overlayScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; display: none; z-index: 15; }
         #overlayScreen h2 { color: #e74c3c; font-size: 32px; margin: 0 0 10px 0; }
         .btn-play { padding: 10px 20px; background: #2ecc71; color: white; border: none; border-radius: 4px; font-size: 18px; cursor: pointer; font-weight: bold;}
+        .btn-play:hover { background: #27ae60; }
     </style>
 </head>
 <body>
@@ -27,7 +29,6 @@
         <div id="videoContainer">
             <video id="introVideo" controls>
                 <source src="ta-video-ici.mp4" type="video/mp4">
-                [Vidéo non trouvée]
             </video>
             <button class="btn-skip" onclick="skipVideo()">Passer ➔</button>
         </div>
@@ -47,42 +48,34 @@
         const ctx = canvas.getContext("2d");
 
         // --- GESTION DES IMAGES ---
-        // 1. Déclarer les objets images
         const imgMarmotte = new Image();
         const imgAigle = new Image();
 
-        // 2. Tenter de charger les fichiers
-        // CHANGE LES NOMS ICI SI BESOIN
+        // ⚠️ METS LES BONS NOMS EXACTS ICI (attention au .jpg vs .png)
         imgMarmotte.src = "marmotte.png"; 
         imgAigle.src = "aigle.png";
 
-        // 3. Vérification du chargement (regarde la console F12)
-        let imagesLoaded = { marmotte: false, aigle: false };
-        imgMarmotte.onload = () => { imagesLoaded.marmotte = true; console.log("✅ Image Marmotte chargée."); };
-        imgAigle.onload = () => { imagesLoaded.aigle = true; console.log("✅ Image Aigle chargée."); };
-        
-        // En cas d'erreur de fichier
-        imgMarmotte.onerror = () => console.error("❌ ERREUR : Impossible de charger 'marmotte.png'. Vérifie le nom du fichier ou utilise Live Server.");
-        imgAigle.onerror = () => console.error("❌ ERREUR : Impossible de charger 'aigle.png'. Vérifie le nom du fichier ou utilise Live Server.");
+        let imagesLoaded = { marmotte: true, aigle: true };
+        imgMarmotte.onload = () => { imagesLoaded.marmotte = true; };
+        imgAigle.onload = () => { imagesLoaded.aigle = true; };
 
-        // --- Paramètres du jeu (BOOSTÉS POUR LA VITESSE) ---
+        // --- Paramètres de la Pente (Modifiés pour l'illusion de descente) ---
         const FOV = 250; 
-        const HORIZON_Y = 120; // Plus bas pour plus de pente
-        const CAMERA_Y = 200; 
+        const HORIZON_Y = 80; // Très bas pour donner l'impression de plonger vers l'avant
+        const CAMERA_Y = 300; // Caméra placée plus haut
         const WORLD_WIDTH = 1400; 
         
         let state = 'VIDEO'; 
         let frames = 0;
         let score = 0;
         
-        // VITESSE AUGMENTÉE RADICALEMENT
-        let targetSpeed = 50; 
-        let currentSpeed = 50;
-        let eagleDanger = 0; // 0 = Loin, 100 = Attrapé !
+        // VITESSE RÉDUITE ET ÉQUILIBRÉE
+        let targetSpeed = 35; 
+        let currentSpeed = 35;
+        let eagleDanger = 0; 
         
         // --- ENTITÉS ---
-        let player = { x: 0, dx: 0, acc: 2, friction: 0.9, y: 0, vy: 0, z: 150, grounded: true };
-        // L'aigle commence devant, haut dans le ciel
+        let player = { x: 0, dx: 0, acc: 1.8, friction: 0.9, y: 0, vy: 0, z: 150, grounded: true };
         let eagle = { x: 0, y: -400, z: 600 }; 
         let obstacles = [];
 
@@ -98,7 +91,7 @@
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
         });
-        function jump() { if (player.grounded) { player.vy = -22; player.grounded = false; } }
+        function jump() { if (player.grounded) { player.vy = -20; player.grounded = false; } }
 
         function skipVideo() {
             document.getElementById("introVideo").pause();
@@ -106,7 +99,7 @@
             resetGame();
         }
 
-        // --- MATHS 3D (Simplifiées) ---
+        // --- MATHS 3D ---
         function project(x, y, z) {
             if (z < 1) z = 1;
             const scale = FOV / (FOV + z);
@@ -115,36 +108,37 @@
             return { x: projX, y: projY, scale: scale };
         }
 
-        // --- DÉCOR (ÉPURÉ) ---
+        // --- DÉCOR ---
         function drawBackground() {
-            // Ciel
             let skyGradient = ctx.createLinearGradient(0, 0, 0, HORIZON_Y);
             skyGradient.addColorStop(0, '#1a75ff'); skyGradient.addColorStop(1, '#8ecae6');
             ctx.fillStyle = skyGradient; ctx.fillRect(0, 0, canvas.width, HORIZON_Y);
 
-            // Montagnes simples
-            ctx.fillStyle = "#4f6c8c"; // Gris-bleu lointain
-            ctx.beginPath(); ctx.moveTo(0, HORIZON_Y); ctx.lineTo(150, 40); ctx.lineTo(300, 90); ctx.lineTo(450, 20); ctx.lineTo(600, 80); ctx.lineTo(750, 50); ctx.lineTo(800, HORIZON_Y); ctx.fill();
+            ctx.fillStyle = "#4f6c8c"; 
+            ctx.beginPath(); ctx.moveTo(0, HORIZON_Y); ctx.lineTo(150, 20); ctx.lineTo(300, 70); ctx.lineTo(450, 10); ctx.lineTo(600, 60); ctx.lineTo(750, 30); ctx.lineTo(800, HORIZON_Y); ctx.fill();
             
-            ctx.fillStyle = "#a3b8cc"; // Plus clair devant
-            ctx.beginPath(); ctx.moveTo(0, HORIZON_Y); ctx.lineTo(100, 70); ctx.lineTo(250, 110); ctx.lineTo(400, 60); ctx.lineTo(550, 100); ctx.lineTo(700, 70); ctx.lineTo(800, HORIZON_Y); ctx.fill();
+            ctx.fillStyle = "#a3b8cc"; 
+            ctx.beginPath(); ctx.moveTo(0, HORIZON_Y); ctx.lineTo(100, 50); ctx.lineTo(250, 80); ctx.lineTo(400, 40); ctx.lineTo(550, 70); ctx.lineTo(700, 50); ctx.lineTo(800, HORIZON_Y); ctx.fill();
         }
 
         function drawGround() {
             ctx.fillStyle = "#ffffff"; ctx.fillRect(0, HORIZON_Y, canvas.width, canvas.height - HORIZON_Y);
-            // Traces de ski légères pour l'effet de vitesse
-            ctx.strokeStyle = "#e6f2ff"; ctx.lineWidth = 1;
-            for(let i=0; i<5; i++) {
-                let z = (frames * currentSpeed + i * 500) % 2000;
-                let p1 = project(-2000, 0, z); let p2 = project(2000, 0, z);
-                if(p1.y > HORIZON_Y) { ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
+            
+            // Lignes de fuite pour renforcer l'illusion de pente plongeante
+            ctx.strokeStyle = "rgba(200, 220, 240, 0.6)"; 
+            ctx.lineWidth = 2;
+            for(let i = -6; i <= 6; i++) {
+                let start = project(i * 250, 0, 0);
+                let end = project(i * 250, 0, 3000);
+                if(start.y > HORIZON_Y) { 
+                    ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke(); 
+                }
             }
         }
 
         // --- MÉCANIQUE ---
         function handleObstacles() {
-            // Apparition plus fréquente car jeu plus rapide
-            if (frames % 15 === 0) {
+            if (frames % 20 === 0) {
                 let rand = Math.random();
                 let type = "tree";
                 if (rand > 0.4) type = "rock";
@@ -153,8 +147,8 @@
                 obstacles.push({
                     x: -WORLD_WIDTH/2 + Math.random() * WORLD_WIDTH,
                     y: 0, z: 2500, type: type,
-                    width: type === "tree" ? 180 : (type === "grass" ? 300 : 100),
-                    height: type === "tree" ? 300 : (type === "grass" ? 10 : 80)
+                    width: type === "tree" ? 160 : (type === "grass" ? 280 : 100),
+                    height: type === "tree" ? 280 : (type === "grass" ? 10 : 80)
                 });
             }
 
@@ -162,7 +156,6 @@
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 let obs = obstacles[i];
                 obs.z -= currentSpeed;
-                // Collision simple
                 if (obs.z > player.z - 30 && obs.z < player.z + 30) {
                     if (player.x > obs.x - obs.width/2 && player.x < obs.x + obs.width/2) {
                         if (obs.type === "tree") gameOver();
@@ -173,13 +166,12 @@
                 if (obs.z < 0) obstacles.splice(i, 1);
             }
 
-            // Gestion de l'aigle
             if (onGrass) {
-                currentSpeed = Math.max(15, currentSpeed - 3); // Ralentit beaucoup
-                eagleDanger = Math.min(100, eagleDanger + 2); // Le danger augmente vite
+                currentSpeed = Math.max(12, currentSpeed - 2); 
+                eagleDanger = Math.min(100, eagleDanger + 1.5); 
             } else {
-                currentSpeed = Math.min(targetSpeed, currentSpeed + 1); // Réaccélère
-                eagleDanger = Math.max(0, eagleDanger - 0.5); // Le danger diminue doucement
+                currentSpeed = Math.min(targetSpeed, currentSpeed + 0.5); 
+                eagleDanger = Math.max(0, eagleDanger - 0.3); 
             }
             if (eagleDanger >= 100) gameOver(); 
         }
@@ -188,15 +180,14 @@
         function drawEntities() {
             let renderList = [];
             obstacles.forEach(obs => renderList.push({ ...obs, isObstacle: true }));
-            renderList.push({ x: player.x, y: player.y, z: player.z, width: 90, height: 90, isPlayer: true });
+            renderList.push({ x: player.x, y: player.y, z: player.z, width: 80, height: 80, isPlayer: true });
 
-            // LOGIQUE AIGLE CORRIGÉE : Plane devant, descend si danger
-            eagle.x = player.x + Math.sin(frames*0.02)*200; // Plane de gauche à droite
-            eagle.z = player.z + 400 - (eagleDanger * 3); // Reste devant (min 100)
-            eagle.y = -350 + (eagleDanger * 3); // Descend (min -50)
-            renderList.push({ x: eagle.x, y: eagle.y, z: eagle.z, width: 300, height: 150, isEagle: true });
+            eagle.x = player.x + Math.sin(frames*0.02)*150; 
+            eagle.z = player.z + 300 - (eagleDanger * 2.5); 
+            eagle.y = -300 + (eagleDanger * 2.5); 
+            renderList.push({ x: eagle.x, y: eagle.y, z: eagle.z, width: 250, height: 120, isEagle: true });
 
-            renderList.sort((a, b) => b.z - a.z); // Tri profondeur
+            renderList.sort((a, b) => b.z - a.z); 
 
             renderList.forEach(item => {
                 if (item.z <= 0) return;
@@ -208,8 +199,8 @@
 
                 if (item.isObstacle) {
                     if (item.type === "tree") {
-                        ctx.fillStyle = "#5d4037"; ctx.fillRect(-vw*0.1, -vh, vw*0.2, vh); // Tronc
-                        ctx.fillStyle = "#064e3b"; ctx.beginPath(); ctx.moveTo(0,-vh); ctx.lineTo(-vw/2,-vh*0.2); ctx.lineTo(vw/2,-vh*0.2); ctx.fill(); // Feuilles
+                        ctx.fillStyle = "#5d4037"; ctx.fillRect(-vw*0.1, -vh, vw*0.2, vh);
+                        ctx.fillStyle = "#064e3b"; ctx.beginPath(); ctx.moveTo(0,-vh); ctx.lineTo(-vw/2,-vh*0.2); ctx.lineTo(vw/2,-vh*0.2); ctx.fill(); 
                     } else if (item.type === "rock") {
                         ctx.fillStyle = "#7f8c8d"; ctx.beginPath(); ctx.moveTo(-vw/2,0); ctx.lineTo(-vw/4,-vh); ctx.lineTo(vw/4,-vh); ctx.lineTo(vw/2,0); ctx.fill();
                     } else if (item.type === "grass") {
@@ -218,12 +209,10 @@
                 }
 
                 if (item.isPlayer) {
-                    // Skis (Toujours dessinés en rouge)
                     ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = vw*0.1; ctx.lineCap="round";
                     ctx.beginPath(); ctx.moveTo(-vw*0.3, 0); ctx.lineTo(-vw*0.4, vh*0.4); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(vw*0.3, 0); ctx.lineTo(vw*0.4, vh*0.4); ctx.stroke();
                     
-                    // Image Marmotte (OU Carré si échec)
                     if (imagesLoaded.marmotte) {
                         ctx.drawImage(imgMarmotte, -vw/2, -vh, vw, vh);
                     } else {
@@ -232,13 +221,11 @@
                 }
 
                 if (item.isEagle) {
-                    // Image Aigle (OU Carré si échec)
                     if (imagesLoaded.aigle) {
                         ctx.drawImage(imgAigle, -vw/2, -vh/2, vw, vh);
                     } else {
                         ctx.fillStyle = "#222"; ctx.fillRect(-vw/2, -vh/2, vw, vh); ctx.fillStyle="white"; ctx.fillText("Aigle", -vw/2, 0);
                     }
-                    // Ombre au sol (grandit si l'aigle descend)
                     ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(0, -item.y * p.scale, vw*0.4, vw*0.1, 0, 0, Math.PI*2); ctx.fill();
                 }
                 ctx.restore();
@@ -251,15 +238,12 @@
             frames++;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Contrôles
             if (keys.left) player.dx -= player.acc;
             if (keys.right) player.dx += player.acc;
             player.dx *= player.friction; player.x += player.dx;
             
-            // Limites piste
             player.x = Math.max(-WORLD_WIDTH/2, Math.min(WORLD_WIDTH/2, player.x));
 
-            // Gravité saut
             player.y += player.vy;
             if (!player.grounded) { player.vy += 1.6; if (player.y >= 0) { player.y = 0; player.grounded = true; player.vy = 0; } }
 
@@ -281,13 +265,12 @@
         }
 
         function resetGame() {
-            state = 'PLAY'; frames = 0; score = 0; currentSpeed = 50; eagleDanger = 0;
+            state = 'PLAY'; frames = 0; score = 0; currentSpeed = 35; eagleDanger = 0;
             obstacles = []; player.x = 0; player.y = 0; player.dx = 0;
             document.getElementById("overlayScreen").style.display = "none";
             updateGame();
         }
 
-        // Démarrage loop (mais attend skipVideo pour lancer la logique PLAY)
         requestAnimationFrame(updateGame);
 
     </script>
