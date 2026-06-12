@@ -5,39 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>La Fuite de la Marmotte : Tout Schuss !</title>
     <style>
-        body { margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; overflow: hidden; color: white;}
+        body { margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #0f1115; font-family: 'Segoe UI', sans-serif; overflow: hidden; color: white;}
         h1 { margin-bottom: 5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); font-size: 24px;}
-        .controls-info { color: #aaa; margin-bottom: 10px; font-size: 14px; }
+        .controls-info { color: #888; margin-bottom: 10px; font-size: 14px; }
         
-        #gameContainer { position: relative; width: 800px; height: 450px; overflow: hidden; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 6px solid #2c3e50; }
+        #gameContainer { position: relative; width: 800px; height: 450px; overflow: hidden; border-radius: 8px; box-shadow: 0 15px 40px rgba(0,0,0,0.9); border: 2px solid #2c3e50; background: #000; }
         
         #gameCanvas {
-            background: #a3d9ff; display: block; width: 100%; height: 100%;
+            background: #8ecae6; display: block; width: 100%; height: 100%;
         }
 
-        #scoreBoard { position: absolute; top: 10px; left: 10px; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 0 #000; z-index: 5;}
-        #warningMessage { position: absolute; top: 40px; left: 10px; font-size: 16px; font-weight: bold; color: #e74c3c; display: none; text-shadow: 1px 1px 0 #000; z-index: 5;}
+        #scoreBoard { position: absolute; top: 15px; left: 15px; font-size: 22px; font-weight: bold; text-shadow: 2px 2px 0 #000; z-index: 5;}
+        #warningMessage { position: absolute; top: 45px; left: 15px; font-size: 16px; font-weight: bold; color: #ff4d4d; display: none; text-shadow: 1px 1px 0 #000; z-index: 5;}
+
+        /* --- Vidéo Intro Épurée --- */
+        #videoContainer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 20;
+        }
+        #introVideo { width: 100%; height: 100%; object-fit: cover; }
+        
+        .btn-skip { 
+            position: absolute; bottom: 20px; right: 20px; padding: 8px 16px; font-size: 14px; 
+            cursor: pointer; background: rgba(0, 0, 0, 0.4); color: rgba(255,255,255,0.8); 
+            border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; font-weight: 500; 
+            backdrop-filter: blur(4px); transition: 0.3s; 
+        }
+        .btn-skip:hover { background: rgba(255, 255, 255, 0.1); color: white; border-color: white; }
 
         .btn-style { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 4px; font-weight: bold; text-decoration: none; transition: 0.2s; }
         .btn-style:hover { background: #c0392b; }
         .btn-play { background: #2ecc71; margin-top: 15px; }
         .btn-play:hover { background: #27ae60; }
-
-        /* --- Écran Vidéo Intro --- */
-        #videoContainer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20;
-        }
-        #introVideo { max-width: 90%; max-height: 70%; border: 2px solid #555; background: #111; }
         
         #overlayScreen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; display: none; z-index: 15;
         }
-        #overlayScreen h2 { color: #e74c3c; font-size: 28px; margin-bottom: 10px; text-shadow: 2px 2px 4px #000;}
+        #overlayScreen h2 { color: #e74c3c; font-size: 32px; margin-bottom: 10px; text-shadow: 2px 2px 4px #000;}
         
-        #touchControls { display: none; width: 800px; max-width: 100%; justify-content: space-between; margin-top: 10px;}
-        .touch-btn { flex: 1; padding: 15px; margin: 0 5px; background: rgba(255,255,255,0.1); border: 2px solid #fff; color: #fff; border-radius: 4px; cursor: pointer; text-align: center; user-select: none; }
+        #touchControls { display: none; width: 800px; max-width: 100%; justify-content: space-between; margin-top: 15px;}
+        .touch-btn { flex: 1; padding: 15px; margin: 0 5px; background: rgba(255,255,255,0.05); border: 1px solid #444; color: #ccc; border-radius: 6px; cursor: pointer; text-align: center; user-select: none; }
         @media (max-width: 800px) { #gameContainer, #touchControls { max-width: 95%; } #gameContainer { height: auto; aspect-ratio: 16/9; } #touchControls { display: flex; } }
     </style>
 </head>
@@ -50,9 +57,8 @@
         <div id="videoContainer">
             <video id="introVideo" controls>
                 <source src="ta-video-ici.mp4" type="video/mp4">
-                [Espace réservé pour ta vidéo]
             </video>
-            <button class="btn-style btn-play" onclick="skipVideo()">Passer l'intro et Jouer ▶</button>
+            <button class="btn-skip" onclick="skipVideo()">Passer l'intro ➔</button>
         </div>
 
         <canvas id="gameCanvas" width="800" height="450"></canvas>
@@ -72,33 +78,30 @@
         <div class="touch-btn" id="btnRight">▶</div>
     </div>
 
-    <a href="index.html" class="btn-style" style="margin-top:20px;">Quitter</a>
-
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
         // --- TES IMAGES ICI ---
-        // Mets le nom exact de tes fichiers (ex: "marmotte.png")
         const imgMarmotte = new Image(); imgMarmotte.src = "marmotte.png"; 
         const imgAigle = new Image(); imgAigle.src = "aigle.png"; 
+        // Si mes nouvelles montagnes codées ne te plaisent pas, mets ton image ici !
+        const imgMontagne = new Image(); imgMontagne.src = ""; 
 
         // --- Paramètres 3D ---
         const FOV = 250; 
-        const HORIZON_Y = 150; 
+        const HORIZON_Y = 160; 
         const CAMERA_Y = 180; 
-        const WORLD_WIDTH = 1400; // Piste plus large pour slalomer
+        const WORLD_WIDTH = 1400; 
         
         // --- Variables du jeu ---
-        let state = 'VIDEO'; // 'VIDEO', 'PLAY', 'GAMEOVER'
+        let state = 'VIDEO'; 
         let frames = 0;
         let score = 0;
         
-        // Vitesse et mécanique de l'aigle
-        let targetSpeed = 25; // Vitesse de croisière
+        let targetSpeed = 25; 
         let currentSpeed = 25;
-        let eagleDistance = 100; // 100 = Loin, 0 = Attrapé !
-        let zOffset = 0;
+        let eagleDistance = 100; 
         
         // --- ENTITÉS ---
         let player = { x: 0, dx: 0, acc: 1.5, friction: 0.9, y: 0, vy: 0, z: 150, grounded: true };
@@ -130,7 +133,6 @@
         function jump() { if (player.grounded) { player.vy = -22; player.grounded = false; } }
 
         function skipVideo() {
-            // Arrête la vidéo si elle tournait
             let vid = document.getElementById("introVideo");
             if(vid) vid.pause();
             document.getElementById("videoContainer").style.display = "none";
@@ -146,50 +148,63 @@
             return { x: projX, y: projY, scale: scale };
         }
 
-        // --- DÉCOR ---
-        function drawBackground() {
-            let skyGradient = ctx.createLinearGradient(0, 0, 0, HORIZON_Y);
-            skyGradient.addColorStop(0, '#005f99'); skyGradient.addColorStop(1, '#a3d9ff');
-            ctx.fillStyle = skyGradient; ctx.fillRect(0, 0, canvas.width, HORIZON_Y);
-
-            ctx.fillStyle = "#ecf0f1"; // Neige sur les montagnes
+        // --- DÉCOR (Montagnes acérées) ---
+        function drawJaggedMountains(offset, color, heightBase, roughness) {
+            ctx.fillStyle = color;
             ctx.beginPath();
             ctx.moveTo(0, HORIZON_Y);
-            for (let x = 0; x <= canvas.width; x += 20) {
-                let mountainY = HORIZON_Y - (80 + Math.sin((x + score * 0.5) * 0.01) * 40 + Math.cos((x) * 0.03) * 20);
-                ctx.lineTo(x, mountainY);
+            for(let x=0; x<=canvas.width; x+=5) {
+                let realX = x + offset;
+                // Combinaison de sinus absolus pour créer des pics rocheux
+                let y = HORIZON_Y - heightBase 
+                        - Math.abs(Math.sin(realX*0.003)*roughness) 
+                        - Math.abs(Math.sin(realX*0.015)*roughness*0.5) 
+                        - Math.abs(Math.sin(realX*0.05)*roughness*0.2);
+                ctx.lineTo(x, y);
             }
-            ctx.lineTo(canvas.width, HORIZON_Y); ctx.fill();
+            ctx.lineTo(canvas.width, HORIZON_Y);
+            ctx.fill();
+        }
+
+        function drawBackground() {
+            let skyGradient = ctx.createLinearGradient(0, 0, 0, HORIZON_Y);
+            skyGradient.addColorStop(0, '#1E3A8A'); // Bleu profond
+            skyGradient.addColorStop(1, '#93C5FD'); // Bleu clair
+            ctx.fillStyle = skyGradient; ctx.fillRect(0, 0, canvas.width, HORIZON_Y);
+
+            if (imgMontagne.complete && imgMontagne.naturalHeight !== 0) {
+                // Utilise ton image si elle est présente
+                ctx.drawImage(imgMontagne, 0, HORIZON_Y - imgMontagne.height * (canvas.width/imgMontagne.width), canvas.width, imgMontagne.height * (canvas.width/imgMontagne.width));
+            } else {
+                // Montagnes lointaines (Gris bleuté sombre)
+                drawJaggedMountains(score * 2, "#475569", 60, 120);
+                // Montagnes proches (Gris clair / Neigeux)
+                drawJaggedMountains(score * 5, "#CBD5E1", 20, 80);
+            }
         }
 
         function drawGround() {
-            ctx.fillStyle = "#ffffff"; // Sol en neige
+            // Sol purement blanc sans les lignes de perspective
+            ctx.fillStyle = "#ffffff"; 
             ctx.fillRect(0, HORIZON_Y, canvas.width, canvas.height - HORIZON_Y);
-
-            ctx.strokeStyle = "rgba(200,220,240,0.5)"; // Traces dans la neige
-            ctx.lineWidth = 2;
-            const numLines = 15;
-            for(let i=0; i<=numLines; i++) {
-                let worldX = -WORLD_WIDTH/2 + (WORLD_WIDTH / numLines) * i;
-                let pStart = project(worldX, 0, 0); let pEnd = project(worldX, 0, 2500);
-                if(pStart.y > HORIZON_Y) { ctx.beginPath(); ctx.moveTo(pStart.x, pStart.y); ctx.lineTo(pEnd.x, pEnd.y); ctx.stroke(); }
-            }
         }
 
         // --- MÉCANIQUE ---
         function handleObstacles() {
             // Apparition (Arbres, Rochers, Herbe)
-            if (frames % Math.max(10, 35 - Math.floor(currentSpeed / 5)) === 0) {
+            if (frames % Math.max(8, 30 - Math.floor(currentSpeed / 5)) === 0) {
                 let rand = Math.random();
                 let type = "tree";
-                if (rand > 0.6) type = "rock";
-                if (rand > 0.85) type = "grass"; // 15% de chance d'avoir de l'herbe
+                if (rand > 0.4) type = "rock";
+                // L'herbe apparaît maintenant dans 35% des cas (au lieu de 15%)
+                if (rand > 0.65) type = "grass"; 
 
                 obstacles.push({
                     x: -WORLD_WIDTH/2 + Math.random() * WORLD_WIDTH,
                     y: 0, z: 2500, type: type,
-                    width: type === "tree" ? 180 : (type === "grass" ? 400 : 100),
-                    height: type === "tree" ? 300 : (type === "grass" ? 10 : 80)
+                    width: type === "tree" ? 180 : (type === "grass" ? 250 + Math.random()*200 : 100),
+                    height: type === "tree" ? 300 : (type === "grass" ? 10 : 80),
+                    shapeForm: Math.floor(Math.random() * 3) // Forme d'herbe aléatoire
                 });
             }
 
@@ -211,44 +226,37 @@
                         }
                     }
                 }
-
                 if (obs.z < 0) obstacles.splice(i, 1);
             }
 
-            // Gestion de la vitesse et de l'aigle
+            // Gestion Vitesse et Aigle
             let warningMsg = document.getElementById("warningMessage");
             if (onGrass) {
-                currentSpeed = Math.max(10, currentSpeed - 1.5); // Ralentit sec !
-                eagleDistance -= 1.5; // L'aigle se rapproche
-                addSnowParticles(true); // Fait voler de la terre
+                currentSpeed = Math.max(12, currentSpeed - 2); 
+                eagleDistance -= 1.8; 
+                addSnowParticles(true); 
                 warningMsg.style.display = "block";
             } else {
-                currentSpeed = Math.min(targetSpeed, currentSpeed + 0.5); // Reprend sa vitesse
-                eagleDistance = Math.min(100, eagleDistance + 0.3); // L'aigle s'éloigne doucement
+                currentSpeed = Math.min(targetSpeed, currentSpeed + 0.5); 
+                eagleDistance = Math.min(100, eagleDistance + 0.3); 
                 warningMsg.style.display = eagleDistance < 50 ? "block" : "none";
                 if(player.grounded) addSnowParticles(false);
             }
 
-            if (eagleDistance <= 0) gameOver(); // L'aigle t'a rattrapé
+            if (eagleDistance <= 0) gameOver(); 
         }
 
         // --- DESSIN DES ENTITÉS ---
         function drawEntities() {
             let renderList = [];
 
-            obstacles.forEach(obs => {
-                renderList.push({ ...obs, isObstacle: true });
-            });
-
-            // Marmotte
+            obstacles.forEach(obs => { renderList.push({ ...obs, isObstacle: true }); });
             renderList.push({ x: player.x, y: player.y, z: player.z, width: 90, height: 90, isPlayer: true });
 
-            // Aigle (Position calculée selon la distance)
-            eagle.x = player.x + Math.sin(frames*0.05)*100; // Tournoie un peu derrière
-            eagle.z = player.z - 100 + (100 - eagleDistance); // Plus l'eagleDistance est basse, plus il est proche en Z
-            eagle.y = -200 + (100 - eagleDistance) * 1.5; // Et il descend en Y
+            eagle.x = player.x + Math.sin(frames*0.05)*100; 
+            eagle.z = player.z - 100 + (100 - eagleDistance); 
+            eagle.y = -200 + (100 - eagleDistance) * 1.5; 
             
-            // Ne dessine l'aigle que s'il est suffisamment proche ou si Game Over
             if(eagleDistance < 90 || state === 'GAMEOVER') {
                 renderList.push({ x: eagle.x, y: eagle.y, z: eagle.z, width: 250, height: 120, isEagle: true });
             }
@@ -264,84 +272,75 @@
                 ctx.save();
                 ctx.translate(p.x, p.y);
 
-                // --- DESSINS IA DE REMPLACEMENT ---
                 if (item.isObstacle) {
                     if (item.type === "tree") {
                         ctx.fillStyle = "#5d4037"; ctx.fillRect(-visualWidth*0.1, -visualHeight, visualWidth*0.2, visualHeight);
-                        ctx.fillStyle = "#1b5e20"; 
-                        for(let j=0; j<3; j++) {
-                            ctx.beginPath(); ctx.moveTo(0, -visualHeight*(1-j*0.3)); ctx.lineTo(-visualWidth/2, -visualHeight*(0.7-j*0.3)); ctx.lineTo(visualWidth/2, -visualHeight*(0.7-j*0.3)); ctx.fill();
-                        }
+                        ctx.fillStyle = "#064E3B"; 
+                        for(let j=0; j<3; j++) { ctx.beginPath(); ctx.moveTo(0, -visualHeight*(1-j*0.3)); ctx.lineTo(-visualWidth/2, -visualHeight*(0.7-j*0.3)); ctx.lineTo(visualWidth/2, -visualHeight*(0.7-j*0.3)); ctx.fill(); }
                     } else if (item.type === "rock") {
-                        ctx.fillStyle = "#7f8c8d"; ctx.beginPath(); ctx.moveTo(-visualWidth/2, 0); ctx.lineTo(-visualWidth/3, -visualHeight); ctx.lineTo(visualWidth/3, -visualHeight); ctx.lineTo(visualWidth/2, 0); ctx.fill();
+                        ctx.fillStyle = "#64748B"; ctx.beginPath(); ctx.moveTo(-visualWidth/2, 0); ctx.lineTo(-visualWidth/3, -visualHeight); ctx.lineTo(visualWidth/3, -visualHeight); ctx.lineTo(visualWidth/2, 0); ctx.fill();
                     } else if (item.type === "grass") {
-                        // Dessin de la plaque d'herbe sur le sol
-                        ctx.fillStyle = "#6b8e23"; // Vert olive
-                        ctx.beginPath(); ctx.ellipse(0, 0, visualWidth/2, visualHeight*2, 0, 0, Math.PI*2); ctx.fill();
-                        // Petits brins d'herbe
-                        ctx.fillStyle = "#556b2f";
-                        for(let i=-2; i<=2; i++) { ctx.fillRect(i*(visualWidth/6), -visualHeight*1.5, visualWidth*0.02, visualHeight*2); }
+                        ctx.fillStyle = "#4D7C0F"; // Vert forêt foncé
+                        ctx.beginPath();
+                        // 3 formes d'herbe différentes
+                        if (item.shapeForm === 0) {
+                            ctx.ellipse(0, 0, visualWidth/2, visualHeight*2.5, 0, 0, Math.PI*2);
+                        } else if (item.shapeForm === 1) {
+                            ctx.ellipse(-visualWidth/4, 0, visualWidth/3, visualHeight*2, 0.2, 0, Math.PI*2);
+                            ctx.ellipse(visualWidth/4, 0, visualWidth/3, visualHeight*1.5, -0.2, 0, Math.PI*2);
+                        } else {
+                            ctx.moveTo(-visualWidth/2, 0);
+                            ctx.bezierCurveTo(-visualWidth/4, -visualHeight*3, visualWidth/4, visualHeight*3, visualWidth/2, 0);
+                            ctx.bezierCurveTo(visualWidth/4, -visualHeight*2, -visualWidth/4, visualHeight*4, -visualWidth/2, 0);
+                        }
+                        ctx.fill();
+                        
+                        // Texture herbe
+                        ctx.fillStyle = "#3F6212";
+                        for(let i=-3; i<=3; i++) { ctx.fillRect(i*(visualWidth/8), -visualHeight*2, visualWidth*0.02, visualHeight*3); }
                     }
                 }
 
-                // --- DESSIN DES SKIS (Toujours générés) ---
                 if (item.isPlayer) {
-                    // Mouvement de ski gauche/droite
                     let skiAngle = (player.dx * 0.05); 
                     ctx.rotate(skiAngle);
 
-                    ctx.fillStyle = "#e74c3c"; // Skis Rouges
+                    ctx.fillStyle = "#EF4444"; 
                     ctx.lineWidth = visualWidth * 0.15;
                     ctx.lineCap = "round";
-                    ctx.strokeStyle = "#e74c3c";
+                    ctx.strokeStyle = "#EF4444";
                     
-                    // Ski Gauche (Pointe vers nous)
-                    ctx.beginPath();
-                    ctx.moveTo(-visualWidth * 0.3, -visualHeight * 0.1); 
-                    ctx.lineTo(-visualWidth * 0.4, visualHeight * 0.4); // Descend plus bas = vers l'avant
-                    ctx.stroke();
-                    // Ski Droit
-                    ctx.beginPath();
-                    ctx.moveTo(visualWidth * 0.3, -visualHeight * 0.1); 
-                    ctx.lineTo(visualWidth * 0.4, visualHeight * 0.4);
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(-visualWidth * 0.3, -visualHeight * 0.1); ctx.lineTo(-visualWidth * 0.4, visualHeight * 0.4); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(visualWidth * 0.3, -visualHeight * 0.1); ctx.lineTo(visualWidth * 0.4, visualHeight * 0.4); ctx.stroke();
 
-                    // Affichage Image Marmotte OU Remplacement
                     if (imgMarmotte.complete && imgMarmotte.naturalHeight !== 0) {
                         ctx.drawImage(imgMarmotte, -visualWidth/2, -visualHeight, visualWidth, visualHeight);
                     } else {
-                        // Fausse marmotte marron
                         ctx.fillStyle = "#8e6e46"; ctx.beginPath(); ctx.ellipse(0, -visualHeight*0.4, visualWidth*0.5, visualHeight*0.5, 0, 0, Math.PI * 2); ctx.fill();
                         ctx.fillStyle = "black"; ctx.font = Math.floor(visualHeight*0.4) + "px Arial"; ctx.fillText("?", -visualWidth*0.1, -visualHeight*0.3);
                     }
                 }
 
                 if (item.isEagle) {
-                    // Ombre menaçante
                     ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.beginPath(); ctx.ellipse(0, -item.y * p.scale, visualWidth * 0.3, visualWidth * 0.1, 0, 0, Math.PI * 2); ctx.fill();
-                    
-                    // Affichage Image Aigle OU Remplacement
                     if (imgAigle.complete && imgAigle.naturalHeight !== 0) {
                         ctx.drawImage(imgAigle, -visualWidth/2, -visualHeight/2, visualWidth, visualHeight);
                     } else {
-                        ctx.fillStyle = "#222"; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-visualWidth/2, -visualHeight); ctx.lineTo(visualWidth/2, -visualHeight); ctx.fill();
-                        ctx.fillStyle = "#f1c40f"; ctx.beginPath(); ctx.arc(0, 0, visualWidth*0.1, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = "#111"; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-visualWidth/2, -visualHeight); ctx.lineTo(visualWidth/2, -visualHeight); ctx.fill();
+                        ctx.fillStyle = "#EAB308"; ctx.beginPath(); ctx.arc(0, 0, visualWidth*0.1, 0, Math.PI*2); ctx.fill();
                     }
                 }
-
                 ctx.restore();
             });
         }
 
-        // --- PARTICULES NEIGE/TERRE ---
+        // --- PARTICULES ---
         function addSnowParticles(isDirt) {
-            if(Math.random() > 0.5) return;
+            if(Math.random() > 0.6) return;
             particles.push({
-                x: player.x - 30 + Math.random()*60, y: 0, z: player.z + 10,
-                size: 3 + Math.random()*6,
+                x: player.x - 30 + Math.random()*60, y: 0, z: player.z + 10, size: 3 + Math.random()*5,
                 vx: -player.dx*0.2 + (Math.random()-0.5)*5, vy: -2 - Math.random()*5,
-                color: isDirt ? "#8B4513" : "#ffffff", // Marron si herbe/terre, blanc si neige
-                alpha: 1
+                color: isDirt ? "#713F12" : "#ffffff", alpha: 1
             });
         }
         function drawParticles() {
@@ -349,7 +348,6 @@
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.alpha -= 0.05;
                 if(p.alpha <= 0 || p.y > 0) { particles.splice(i, 1); continue; }
-                
                 let proj = project(p.x, p.y, p.z);
                 ctx.fillStyle = p.color; ctx.globalAlpha = p.alpha;
                 ctx.beginPath(); ctx.arc(proj.x, proj.y, p.size * proj.scale, 0, Math.PI * 2); ctx.fill();
@@ -361,7 +359,6 @@
         function updateLogic() {
             if (state !== 'PLAY') return;
 
-            // Déplacement
             if (keys.left) player.dx -= player.acc;
             if (keys.right) player.dx += player.acc;
             player.dx *= player.friction;
@@ -370,18 +367,15 @@
             if (player.x < -WORLD_WIDTH/2) { player.x = -WORLD_WIDTH/2; player.dx = 0; }
             if (player.x > WORLD_WIDTH/2) { player.x = WORLD_WIDTH/2; player.dx = 0; }
 
-            // Saut
             player.y += player.vy;
             if (!player.grounded) {
                 player.vy += 1.6;
                 if (player.y >= 0) { player.y = 0; player.grounded = true; player.vy = 0; }
             }
 
-            zOffset += currentSpeed;
             score += (currentSpeed / 100);
             document.getElementById("score").innerText = Math.floor(score);
-            
-            if (frames % 600 === 0) targetSpeed += 1.5; // La pente s'accentue
+            if (frames % 600 === 0) targetSpeed += 1.5; 
 
             handleObstacles();
         }
@@ -395,7 +389,7 @@
         }
 
         function resetGame() {
-            state = 'PLAY'; frames = 0; score = 0; targetSpeed = 25; currentSpeed = 25; eagleDistance = 100; zOffset = 0;
+            state = 'PLAY'; frames = 0; score = 0; targetSpeed = 25; currentSpeed = 25; eagleDistance = 100;
             obstacles = []; particles = [];
             player.x = 0; player.dx = 0; player.y = 0; player.vy = 0; player.grounded = true;
             document.getElementById("overlayScreen").style.display = "none";
@@ -407,7 +401,6 @@
             if (state !== 'VIDEO') {
                 frames++;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-
                 updateLogic();
                 drawBackground();
                 drawGround();
@@ -417,9 +410,7 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Lancement
         gameLoop();
-
     </script>
 </body>
 </html>
