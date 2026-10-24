@@ -385,11 +385,11 @@
             const tot = gAttente + aAttente + sAttente;
             badge.innerText = tot; badge.classList.toggle("hidden", tot <= 0);
 
-            const idsP = fauneEtFlore.plantes.map(p=>p.id);
+            const idsP = [...fauneEtFlore.plantes.map(p=>p.id), ...recettes.filter(r=>r.type==='plante').map(r=>r.id)];
             const foundP = new Set(inventaireJoueur.filter(id=>idsP.includes(id))).size;
             document.getElementById("count-plantes-trouvees").innerText = `${foundP}/${idsP.length}`;
             
-            const idsA = fauneEtFlore.animaux.map(p=>p.id);
+            const idsA = [...fauneEtFlore.animaux.map(p=>p.id), ...recettes.filter(r=>r.type==='animal').map(r=>r.id)];
             const foundA = new Set(inventaireJoueur.filter(id=>idsA.includes(id))).size;
             document.getElementById("count-animaux-trouves").innerText = `${foundA}/${idsA.length}`;
         }
@@ -494,17 +494,20 @@
             const isNew = !inventaireJoueur.includes(pendingSpecies.id);
             inventaireJoueur.push(pendingSpecies.id);
             
-            if(pendingSpecies.type === 'plante'){
-                const r = pendingSpecies.rarete.toLowerCase();
-                if(r.includes('legendaire')) pierresJoueur += 10;
-                else if(r.includes('epique')) pierresJoueur += 5;
-                else if(r.includes('rare')) pierresJoueur += 3;
-                else pierresJoueur += 1;
-            }
+            const r = pendingSpecies.rarete.toLowerCase();
+            let gainBase = 1;
+            if(r.includes('legendaire')) gainBase = 10;
+            else if(r.includes('epique')) gainBase = 5;
+            else if(r.includes('rare')) gainBase = 3;
+
+            const gainPierres = isNew ? gainBase : gainBase * 2;
+            pierresJoueur += gainPierres;
             
             sauvegarderProgression();
             setTimeout(() => {
-                document.getElementById("reward-header-text").innerText = isNew ? "✨ Nouvelle découverte !" : "🔁 Doublon ! (+ Pierres)";
+                document.getElementById("reward-header-text").innerText = isNew 
+                    ? `✨ Nouvelle découverte ! (+${gainPierres} 🪨)` 
+                    : `🔁 Doublon ! (+${gainPierres} 🪨)`;
                 document.getElementById("btn-continue-reward").classList.remove("hidden");
             }, 800);
         }
@@ -525,6 +528,8 @@
                          .filter(s => s.rarete.toLowerCase().includes(rarity.toLowerCase()));
             if(!pool.length) return;
             pierresJoueur -= price;
+            sauvegarderProgression();
+            updateHUD();
             const item = pool[Math.floor(Math.random()*pool.length)];
             triggerReward(type, item);
         }
@@ -532,6 +537,8 @@
         function buyBag(price) {
             if(pierresJoueur < price) { alert("Pas assez de pierres !"); return; }
             pierresJoueur -= price;
+            sauvegarderProgression();
+            updateHUD();
             rewardQueue = [{type:'plante'}, {type:'plante'}, {type:'plante'}, {type:'animal'}, {type:'animal'}];
             closeReward(); 
         }
@@ -561,11 +568,13 @@
         function renderInventory() {
             const gp = document.getElementById("grid-plantes"), ga = document.getElementById("grid-animaux");
             gp.innerHTML = ""; ga.innerHTML = "";
-            fauneEtFlore.plantes.forEach(s => {
+            const toutesPlantes = [...fauneEtFlore.plantes, ...recettes.filter(r => r.type === 'plante')];
+            const tousAnimaux = [...fauneEtFlore.animaux, ...recettes.filter(r => r.type === 'animal')];
+            toutesPlantes.forEach(s => {
                 const c = inventaireJoueur.filter(id => id === s.id).length;
                 gp.innerHTML += buildCardHTML(s, c===0, c);
             });
-            fauneEtFlore.animaux.forEach(s => {
+            tousAnimaux.forEach(s => {
                 const c = inventaireJoueur.filter(id => id === s.id).length;
                 ga.innerHTML += buildCardHTML(s, c===0, c);
             });
@@ -625,11 +634,10 @@
                     if(idx > -1) inventaireJoueur.splice(idx, 1);
                 }
             });
-            inventaireJoueur.push(id);
             sauvegarderProgression();
-            alert("Succès ! Vous avez restauré l'espèce : " + r.nom);
             renderLaboratoire(); 
             updateHUD();
+            triggerReward(r.type, r);
         }
 
         function pullGacha(l) {
