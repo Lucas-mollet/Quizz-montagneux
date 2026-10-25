@@ -3,320 +3,2685 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Fuite de la Marmotte : TOUT SCHUSS !</title>
+    <title>La Fuite de la Marmotte PRO: Piste Noire</title>
     <style>
-        body { margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #111; font-family: 'Segoe UI', sans-serif; overflow: hidden; color: white;}
-        #gameContainer { position: relative; width: 800px; height: 450px; overflow: hidden; border: 4px solid #333; background: #000; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
-        #gameCanvas { background: #8ecae6; display: block; width: 100%; height: 100%; }
-        #scoreBoard { position: absolute; top: 10px; left: 10px; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 0 #000; z-index: 5;}
-        
-        /* Vidéo Intro */
-        #videoContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 20; display: flex; flex-direction: column; }
-        #introVideo { width: 100%; height: 100%; object-fit: cover; }
-        .btn-skip { position: absolute; bottom: 15px; right: 15px; padding: 8px 15px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer; z-index: 21; transition: 0.2s;}
-        .btn-skip:hover { background: rgba(255,255,255,0.2); }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; background-color: #0b1724; font-family: 'Segoe UI', sans-serif; overflow: hidden; color: white; display: flex; align-items: center; justify-content: center; }
 
-        /* Écrans overlay */
-        #overlayScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; display: none; z-index: 15; }
-        #overlayScreen h2 { color: #e74c3c; font-size: 32px; margin: 0 0 10px 0; }
-        .btn-play { padding: 10px 20px; background: #2ecc71; color: white; border: none; border-radius: 4px; font-size: 18px; cursor: pointer; font-weight: bold;}
-        .btn-play:hover { background: #27ae60; }
+        /* Grand écran immersif (100% de la fenêtre) */
+        #gameContainer { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #09304e; }
+
+        #gameCanvas {
+            width: 100%; height: 100%;
+            background: #a3d9ff;
+            display: block;
+        }
+
+        /* Barre supérieure flottante (Score + Contrôles + Boutons Audio/Plein Écran/Quitter) */
+        #topHud {
+            position: absolute; top: 14px; left: 18px; right: 18px;
+            display: flex; align-items: center; justify-content: space-between;
+            pointer-events: none; z-index: 15;
+        }
+
+        #scoreBoard {
+            font-size: 22px; font-weight: 800;
+            background: rgba(15, 32, 48, 0.65);
+            padding: 8px 18px; border-radius: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(6px);
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
+            pointer-events: auto;
+        }
+
+        .controls-info {
+            font-size: 14px; color: rgba(255, 255, 255, 0.92);
+            background: rgba(15, 32, 48, 0.55);
+            padding: 7px 15px; border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(4px);
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        #topButtons {
+            display: flex; align-items: center; gap: 10px;
+            pointer-events: auto;
+        }
+
+        .hud-btn {
+            padding: 8px 16px; background: rgba(15, 32, 48, 0.72); color: white;
+            border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 22px;
+            font-size: 14px; font-weight: bold; cursor: pointer; text-decoration: none;
+            backdrop-filter: blur(5px); transition: 0.2s;
+        }
+        .hud-btn:hover { background: rgba(255, 255, 255, 0.22); border-color: white; }
+        .btn-back { background: rgba(231, 76, 60, 0.88); border-color: rgba(255,255,255,0.4); }
+        .btn-back:hover { background: #c0392b; }
+
+        #overlayScreen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(8, 18, 30, 0.85);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; z-index: 100; backdrop-filter: blur(6px); padding: 20px;
+        }
+        #overlayScreen h2 { color: #e74c3c; font-size: 42px; margin: 0 0 12px 0; text-shadow: 2px 2px 6px #000; font-weight: 900; }
+        #overlayReason {
+            max-width: 680px; font-size: 20px; line-height: 1.45; color: #ffecec;
+            background: rgba(231, 76, 60, 0.18); border: 1px solid rgba(231, 76, 60, 0.5);
+            padding: 14px 24px; border-radius: 16px; margin: 0 0 18px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Fenêtre explicative des règles avant le début de la partie */
+        #rulesScreen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(7, 19, 32, 0.82);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 90; backdrop-filter: blur(7px); padding: 20px;
+        }
+        .rules-card {
+            max-width: 780px; width: 94%;
+            background: linear-gradient(160deg, rgba(16, 38, 62, 0.96), rgba(9, 24, 40, 0.98));
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 24px; padding: 28px 34px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+            color: #fff; text-align: left;
+        }
+        .rules-card h2 {
+            margin: 0 0 16px 0; font-size: 30px; text-align: center;
+            color: #ffd700; text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+        }
+        .rules-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px;
+        }
+        .rule-item {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 14px; padding: 12px 15px; font-size: 14.5px; line-height: 1.42;
+        }
+        .rule-item strong { color: #74b9ff; display: block; margin-bottom: 4px; font-size: 15.5px; }
+        .rule-item.warn strong { color: #ff7675; }
+        .rule-item.bonus strong { color: #ffeaa7; }
+        .rules-actions { text-align: center; }
+        .btn-start-game {
+            padding: 14px 36px; font-size: 19px; cursor: pointer;
+            background: linear-gradient(135deg, #2ecc71, #27ae60); color: white;
+            border: 2px solid rgba(255,255,255,0.5); border-radius: 32px;
+            font-weight: 800; box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+            transition: 0.2s;
+        }
+        .btn-start-game:hover { transform: scale(1.04); background: #2ecc71; border-color: #fff; }
+        @media (max-width: 720px) { .rules-grid { grid-template-columns: 1fr; } }
+
+        /* Bouton central si le navigateur demande un clic pour lancer la vidéo avec le son */
+        #btnPlayIntroWithSound {
+            position: absolute; padding: 18px 34px; font-size: 20px; font-weight: 800;
+            background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff;
+            border: 2px solid #fff; border-radius: 40px; cursor: pointer; z-index: 65;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.65); display: none; transition: 0.2s;
+        }
+        #btnPlayIntroWithSound:hover { transform: scale(1.05); }
+
+        /* Cinématique vidéo d'introduction plein écran */
+        #videoContainer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #163654 0%, #07131e 100%);
+            z-index: 50; display: flex; align-items: center; justify-content: center;
+        }
+        #introVideo { width: 100%; height: 100%; object-fit: cover; }
+
+        #videoFallbackMsg {
+            position: absolute; text-align: center; pointer-events: none;
+            background: rgba(10, 25, 40, 0.75); padding: 28px 40px; border-radius: 16px;
+            border: 2px solid rgba(255,255,255,0.2); backdrop-filter: blur(8px);
+            display: none;
+        }
+
+        .btn-skip {
+            position: absolute; bottom: 32px; right: 32px; padding: 12px 26px;
+            font-size: 17px; cursor: pointer; background: rgba(231, 76, 60, 0.85);
+            color: white; border: 2px solid rgba(255,255,255,0.6); border-radius: 30px;
+            font-weight: bold; backdrop-filter: blur(6px); transition: 0.25s; z-index: 60;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        }
+        .btn-skip:hover { background: #e74c3c; transform: scale(1.04); border-color: white; }
+
+        .btn-unmute-video {
+            position: absolute; bottom: 32px; left: 32px; padding: 10px 20px;
+            font-size: 15px; cursor: pointer; background: rgba(0, 0, 0, 0.6);
+            color: white; border: 2px solid rgba(255,255,255,0.45); border-radius: 25px;
+            font-weight: bold; backdrop-filter: blur(5px); transition: 0.2s; z-index: 60;
+            display: none;
+        }
+        .btn-unmute-video:hover { background: rgba(255,255,255,0.2); }
+
+        /* Bouton permanent en bas de l'écran pour couper / réactiver le son du jeu */
+        #btnMuteBottom {
+            position: absolute; bottom: 22px; left: 24px; padding: 10px 20px;
+            font-size: 15px; font-weight: bold; cursor: pointer;
+            background: rgba(15, 32, 48, 0.78); color: white;
+            border: 2px solid rgba(255, 255, 255, 0.45); border-radius: 26px;
+            backdrop-filter: blur(6px); transition: 0.2s; z-index: 120;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+        }
+        #btnMuteBottom:hover { background: rgba(255, 255, 255, 0.22); border-color: white; transform: scale(1.03); }
+
+        #touchControls { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: none; width: 92%; justify-content: space-between; z-index: 25; }
+        .touch-btn { flex: 1; padding: 15px; margin: 0 5px; background: rgba(15,32,48,0.65); border: 2px solid #fff; color: #fff; border-radius: 12px; cursor: pointer; text-align: center; user-select: none; font-weight: bold; }
+        @media (max-width: 900px) { .controls-info { display: none; } #touchControls { display: flex; } }
     </style>
 </head>
 <body>
 
+    <!-- MUSIQUE DE FOND (place ton fichier "musique.mp3" dans le même dossier !) -->
+    <!-- MUSIQUE DE FOND ("musique jeu.mp3" dans le dossier) -->
+    <audio id="bgMusic" src="musique jeu.mp3" loop preload="auto"></audio>
+
     <div id="gameContainer">
+        <!-- CINÉMATIQUE D'INTRODUCTION ("intro marmotte.mp4" dans le dossier) -->
         <div id="videoContainer">
-            <video id="introVideo" controls>
-                <source src="ta-video-ici.mp4" type="video/mp4">
+            <video id="introVideo" src="intro marmotte.mp4" playsinline preload="auto">
+                <source src="intro marmotte.mp4" type="video/mp4">
             </video>
-            <button class="btn-skip" onclick="skipVideo()">Passer ➔</button>
+            <div id="videoFallbackMsg">
+                <h2 style="margin:0 0 10px 0; font-size:32px;">⛷️ La Marmotte Tout Schuss : Piste Noire</h2>
+                <p style="margin:0; color:#b8d8f4; font-size:16px;">Cinématique prête (fichier <code>intro marmotte.mp4</code>)</p>
+            </div>
+            <button id="btnPlayIntroWithSound" onclick="playIntroWithSound()">🎬 Lancer l'introduction (avec son 🔊)</button>
+            <button class="btn-unmute-video" id="btnUnmuteVideo" onclick="unmuteIntroVideo()">🔊 Activer le son de la vidéo</button>
+            <button class="btn-skip" onclick="skipVideo()">Passer la cinématique ➔</button>
         </div>
 
-        <canvas id="gameCanvas" width="800" height="450"></canvas>
-        <div id="scoreBoard">Distance: <span id="score">0</span>m</div>
+        <!-- FENÊTRE EXPLICATIVE DES RÈGLES AVANT QUE LE JEU COMMENCE -->
+        <div id="rulesScreen">
+            <div class="rules-card">
+                <h2>⛷️ Règles du Jeu — La Fuite de la Marmotte</h2>
+                <div class="rules-grid">
+                    <div class="rule-item">
+                        <strong>🕹️ Déplacements & Saut de base</strong>
+                        Utilise <b>⬅️ / ➡️</b> pour slalomer sur la piste et <b>ESPACE</b> pour sauter par-dessus les <b>rochers</b> et les <b>rondins</b>.
+                    </div>
+                    <div class="rule-item bonus">
+                        <strong>🔥 Bosses & Figures aériennes (⬆️)</strong>
+                        Sur une <b>bosse</b>, maintiens la <b>flèche du haut (⬆️)</b> en l'air pour incliner tes skis en flammes, sauter par-dessus les sapins et gagner un <b>boost d'atterrissage (avec immunité)</b> !
+                    </div>
+                    <div class="rule-item bonus">
+                        <strong>🛹 Rampes, Deltaplane 🪂 & Cartes 🐾</strong>
+                        Plus tu réussis de figures (<b>⬆️</b>) sur les <b>bosses et rampes</b>, plus tu as de chances de faire apparaître des <b>Cartes Animal 🐾</b> ! En <b>deltaplane</b>, évite les <b>petits nuages</b> pour récupérer la carte cachée derrière !
+                    </div>
+                    <div class="rule-item warn">
+                        <strong>⚠️ Attention à l'atterrissage & à l'Aigle !</strong>
+                        <b>Relâche toujours ⬆️ avant de toucher le sol</b> sinon tu chutes ! Toucher l'<b>herbe</b> ou un <b>rondin</b> une 1<sup>re</sup> fois rapproche l'aigle (⚠️), la 2<sup>e</sup> fois il t'attrape !
+                    </div>
+                </div>
+                <div class="rules-actions">
+                    <button class="btn-start-game" onclick="startGameFromRules()">Chausser les skis ! ⛷️</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rendu Haute Définition 1600x900 en plein écran (espace logique 800x450 conservé) -->
+        <canvas id="gameCanvas" width="1600" height="900"></canvas>
+
+        <div id="topHud">
+            <div id="scoreBoard">Distance: <span id="score">0</span>m | Vitesse: <span id="speedDisplay">50</span> km/h | Figures: <span id="trickCount">0</span> 🏅 | Cartes: <span id="cardCount">0</span> 🐾</div>
+            <div class="controls-info">⬅️ ➡️ Déplacer | ESPACE Sauter | ⬆️ Figure en l'air (relâcher avant d'atterrir !)</div>
+            <div id="topButtons">
+                <button class="hud-btn" onclick="showRulesScreen()">📖 Règles</button>
+                <button class="hud-btn" id="btnMusic" onclick="toggleMusic()">🔊 Musique</button>
+                <button class="hud-btn" id="btnFullscreen" onclick="toggleFullscreen()">⛶ Plein écran</button>
+                <a href="index.html" class="hud-btn btn-back">Quitter</a>
+            </div>
+        </div>
+
+        <!-- Bouton pour couper/activer le son en bas de l'écran -->
+        <button id="btnMuteBottom" onclick="toggleMusic()">🔊 Couper le son</button>
         
         <div id="overlayScreen">
-            <h2 id="overlayTitle">L'AIGLE T'A EU !</h2>
-            <p>Score : <span id="finalScore">0</span>m</p>
-            <button class="btn-play" onclick="resetGame()">RECHARGER</button>
+            <h2 id="overlayTitle">PARTIE TERMINÉE</h2>
+            <p id="overlayReason">Tu as chuté sur la piste et l'aigle t'a rattrapé !</p>
+            <p style="font-size:22px; margin-bottom: 20px;">Distance parcourue : <span id="finalScore">0</span>m | Cartes Animal gagnées : <span id="finalCards">0</span> 🐾</p>
+            <div style="display:flex; gap:14px; flex-wrap:wrap; justify-content:center;">
+                <button style="padding:14px 30px; font-size:18px; cursor:pointer; background:#2ecc71; color:white; border:none; border-radius:30px; font-weight:bold; box-shadow: 0 5px 15px rgba(0,0,0,0.4);" onclick="initGame()">Rechausser les skis ⛷️</button>
+                <button style="padding:14px 24px; font-size:17px; cursor:pointer; background:rgba(255,255,255,0.15); color:white; border:2px solid rgba(255,255,255,0.4); border-radius:30px; font-weight:bold;" onclick="showRulesScreen()">📖 Revoir les règles</button>
+            </div>
+        </div>
+
+        <div id="touchControls">
+            <div class="touch-btn" id="btnLeft">◀ Gauche</div>
+            <div class="touch-btn" id="btnJump">Saut ⬆</div>
+            <div class="touch-btn" id="btnRight">Droite ▶</div>
         </div>
     </div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        const LOGIC_W = 800;
+        const LOGIC_H = 450;
 
-        // --- GESTION DES IMAGES ---
-        const imgMarmotte = new Image();
-        const imgAigle = new Image();
+        // --- GESTION AUDIO (MUSIQUE DE FOND .MP3) & VIDÉO D'INTRO (.MP4) ---
+        const bgMusic = document.getElementById("bgMusic");
+        const introVideo = document.getElementById("introVideo");
+        let isMusicMuted = false;
 
-        // ⚠️ Vérifie majuscules/minuscules !
-        imgMarmotte.src = "marmotte.png"; 
-        imgAigle.src = "aigle.png";
-
-        let imagesLoaded = { marmotte: false, aigle: false };
-        imgMarmotte.onload = () => { imagesLoaded.marmotte = true; console.log("Marmotte chargée !"); };
-        imgAigle.onload = () => { imagesLoaded.aigle = true; console.log("Aigle chargé !"); };
-
-        // --- PARAMÈTRES PENTE EXTRÊME ---
-        const FOV = 250; 
-        const HORIZON_Y = 50; // Plus bas = Pente vertigineuse
-        const CAMERA_Y = 400; // Caméra plus haute pour écraser la perspective
-        const WORLD_WIDTH = 1400; 
-        
-        let state = 'VIDEO'; 
-        let frames = 0;
-        let score = 0;
-        
-        let targetSpeed = 35; 
-        let currentSpeed = 35;
-        let eagleDanger = 0; 
-        
-        // --- ENTITÉS ---
-        let player = { x: 0, dx: 0, acc: 2, friction: 0.9, y: 0, vy: 0, z: 150, grounded: true };
-        let eagle = { x: 0, y: -400, z: 600 }; 
-        let obstacles = [];
-        let particles = [];
-
-        // --- CONTRÔLES ---
-        let keys = { left: false, right: false };
-        window.addEventListener('keydown', e => {
-            if (state !== 'PLAY') return;
-            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
-            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
-            if (e.code === 'Space' || e.code === 'ArrowUp') jump();
-        });
-        window.addEventListener('keyup', e => {
-            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
-            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
-        });
-        
-        function jump() { 
-            if (player.grounded) { 
-                player.vy = -26; // Impulsion plus forte pour saut long
-                player.grounded = false; 
-            } 
+        function startBackgroundMusic() {
+            if (!bgMusic) return;
+            bgMusic.volume = 0.45;
+            bgMusic.muted = isMusicMuted;
+            bgMusic.play().catch(() => {
+                // Si le navigateur attend une interaction clavier/clic, on relance au premier appui de touche
+            });
         }
 
-        function skipVideo() {
-            document.getElementById("introVideo").pause();
-            document.getElementById("videoContainer").style.display = "none";
-            resetGame();
-        }
-
-        // --- MATHS 3D ---
-        function project(x, y, z) {
-            if (z < 1) z = 1;
-            const scale = FOV / (FOV + z);
-            const projX = (canvas.width / 2) + (x * scale);
-            const projY = HORIZON_Y + ((y + CAMERA_Y) * scale);
-            return { x: projX, y: projY, scale: scale };
-        }
-
-        // --- DÉCOR ---
-        function drawBackground() {
-            let skyGradient = ctx.createLinearGradient(0, 0, 0, HORIZON_Y);
-            skyGradient.addColorStop(0, '#1a75ff'); skyGradient.addColorStop(1, '#8ecae6');
-            ctx.fillStyle = skyGradient; ctx.fillRect(0, 0, canvas.width, HORIZON_Y);
-
-            ctx.fillStyle = "#4f6c8c"; 
-            ctx.beginPath(); ctx.moveTo(0, HORIZON_Y); ctx.lineTo(150, 10); ctx.lineTo(300, 40); ctx.lineTo(450, 5); ctx.lineTo(600, 30); ctx.lineTo(750, 15); ctx.lineTo(800, HORIZON_Y); ctx.fill();
-        }
-
-        function drawGround() {
-            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, HORIZON_Y, canvas.width, canvas.height - HORIZON_Y);
-            
-            // Lignes de fuite accentuées pour la vitesse
-            ctx.strokeStyle = "rgba(200, 220, 240, 0.8)"; 
-            ctx.lineWidth = 2;
-            for(let i = -8; i <= 8; i++) {
-                let start = project(i * 200, 0, 0);
-                let end = project(i * 200, 0, 3000);
-                if(start.y > HORIZON_Y) { 
-                    ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke(); 
+        function toggleMusic() {
+            if (document.activeElement) document.activeElement.blur();
+            isMusicMuted = !isMusicMuted;
+            if (bgMusic) {
+                bgMusic.muted = isMusicMuted;
+                if (!isMusicMuted && bgMusic.paused && state === 'PLAY') {
+                    bgMusic.play().catch(() => {});
                 }
+            }
+            if (introVideo) {
+                introVideo.muted = isMusicMuted;
+            }
+            document.getElementById("btnMusic").innerText = isMusicMuted ? "🔇 Muet" : "🔊 Musique";
+            const bottomBtn = document.getElementById("btnMuteBottom");
+            if (bottomBtn) {
+                bottomBtn.innerText = isMusicMuted ? "🔇 Réactiver le son" : "🔊 Couper le son";
             }
         }
 
-        // --- PARTICULES (Neige des skis et Terre) ---
-        function addSnowParticles(isDirt) {
-            let count = isDirt ? 3 : 1; // Plus de particules si c'est de la terre
-            for(let i=0; i<count; i++) {
-                // Alterner entre le ski gauche (-20) et le ski droit (+20)
-                let skiOffset = Math.random() > 0.5 ? 25 : -25;
-                particles.push({
-                    x: player.x + skiOffset + (Math.random()*10 - 5),
-                    y: 0, 
-                    z: player.z + 20, 
-                    size: 2 + Math.random()*4,
-                    vx: -player.dx*0.1 + (Math.random()-0.5)*3, 
-                    vy: -1 - Math.random()*3,
-                    color: isDirt ? "#713F12" : "#ffffff", 
-                    alpha: 1
+        function toggleFullscreen() {
+            if (document.activeElement) document.activeElement.blur();
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        }
+
+        function unmuteIntroVideo() {
+            if (introVideo) {
+                introVideo.muted = false;
+                introVideo.volume = 1.0;
+                introVideo.play().catch(() => {});
+            }
+            document.getElementById("btnUnmuteVideo").style.display = "none";
+            document.getElementById("btnPlayIntroWithSound").style.display = "none";
+        }
+
+        function playIntroWithSound() {
+            if (!introVideo) return;
+            document.getElementById("btnPlayIntroWithSound").style.display = "none";
+            document.getElementById("btnUnmuteVideo").style.display = "none";
+            introVideo.muted = false;
+            introVideo.volume = 1.0;
+            introVideo.play().catch(() => {});
+        }
+
+        function startIntroSequence() {
+            state = 'VIDEO';
+            const vidCont = document.getElementById("videoContainer");
+            const fallbackMsg = document.getElementById("videoFallbackMsg");
+            const unmuteBtn = document.getElementById("btnUnmuteVideo");
+            const playWithSoundBtn = document.getElementById("btnPlayIntroWithSound");
+            vidCont.style.display = "flex";
+
+            if (!introVideo) {
+                skipVideo();
+                return;
+            }
+
+            // Passage automatique à la fenêtre des règles dès la fin de la vidéo
+            introVideo.onended = () => { skipVideo(); };
+
+            // Si le fichier mp4 n'est pas trouvé, affiche un message propre avec le bouton Passer
+            const sources = introVideo.querySelectorAll("source");
+            let errorCount = 0;
+            sources.forEach(src => {
+                src.addEventListener("error", () => {
+                    errorCount++;
+                    if (errorCount >= sources.length) {
+                        fallbackMsg.style.display = "block";
+                    }
+                });
+            });
+            introVideo.onerror = () => { fallbackMsg.style.display = "block"; };
+
+            // Son activé de base à 100% pour la vidéo d'intro !
+            introVideo.muted = false;
+            introVideo.volume = 1.0;
+            let playPromise = introVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    // Si le navigateur bloque le son au chargement direct sans clic préalable,
+                    // on met la vidéo en pause au début avec un gros bouton central pour qu'elle démarre AVEC LE SON dès le clic !
+                    introVideo.pause();
+                    introVideo.currentTime = 0;
+                    playWithSoundBtn.style.display = "block";
                 });
             }
         }
 
-        function drawParticles() {
+        // --- IMAGES ---
+        const imgMarmotte = new Image(); imgMarmotte.src = "marmotte.png"; 
+        const imgAigle = new Image(); imgAigle.src = "aigle.png"; 
+
+        let imagesLoaded = { marmotte: false, aigle: false };
+        imgMarmotte.onload = () => { imagesLoaded.marmotte = true; };
+        imgAigle.onload = () => { imagesLoaded.aigle = true; };
+
+        // --- MATHS 3D : VUE ENCORE PLUS SURÉLEVÉE ET PENTE ENCORE PLUS RAIDE ---
+        const FOV = 300; 
+        const HORIZON_Y = 55;   // Horizon haut
+        const CAMERA_Y = 820;   // Caméra très haute pour surplomber la piste et laisser de la place aux sauts sur bosses !
+        const WORLD_WIDTH = 2500; // Largeur de piste resserrée pour que la marmotte reste toujours bien dans le champ de la caméra !
+        
+        let state = 'VIDEO'; 
+        let frames = 0;
+        let score = 0;
+        let groundScroll = 0; // Défilement visuel de la neige
+        
+        // --- SYSTÈME DE VIRAGES FLUIDES (SANS SACCADE) ---
+        let currentCurve = 0;      // Courbure affichée à l'écran
+        let smoothCurve = 0;       // Courbure intermédiaire lissée
+        let targetCurve = 0;       // Prochain virage visé
+        let curveLerpSpeed = 0.02; // Vitesse d'entrée progressive
+        let curveTimer = 90;       // Temps avant le prochain changement de virage
+        let bgScrollX = 0;         // Parallaxe horizontale du décor quand la piste tourne
+        let cameraX = 0;           // Position X de la caméra lissée (évite les à-coups !)
+        
+        // --- GESTION DYNAMIQUE DE LA VITESSE (Vitesse de base légèrement augmentée, accélération douce) ---
+        let globalTargetSpeed = 24.5; // Départ un peu plus rapide (~54 km/h)
+        let currentSpeed = 24.5;
+        let landingBoostTimer = 0; // Légère accélération à la retombée d'un saut ou d'une rampe !
+        let distSinceLastObstacle = 800; // Spawn direct
+        let distSinceLastScenery = 0;    // Pour les chalets et sapins enneigés hors-piste
+        let grassTouches = 0; // Compteur d'alertes Aigle (1 = l'aigle s'approche, 2 = l'aigle nous mange !)
+
+        // --- SYSTÈME DE BOSSES & FIGURES AÉRIENNES (FLÈCHE DU HAUT) ---
+        let tricksLanded = 0;
+        let trickTextPopups = []; // Alertes visuelles (ex: ⚠️ quand l'aigle approche)
+        let eagleAttackTimer = 0; // Animation de l'aigle qui fonce sur la marmotte avant l'écran de fin !
+
+        // --- ENTITÉS ---
+        let player = { 
+            x: 0, dx: 0, acc: 4.5, friction: 0.85, 
+            y: 0, vy: 0, 
+            z: 665, // Z=665 place la marmotte encore plus haut dans le mur de la pente accrue !
+            grounded: true,
+            boostImmune: false,      // Immunité aux obstacles pendant le boost d'atterrissage après une bosse ou rampe réussie !
+            onMogulJump: false,      // Saut propulsé par un tremplin/bosse
+            isRidingMogul: false,    // En train de monter sur la rampe courbée de la bosse
+            wantsMegaJump: false,    // A appuyé sur Saut / Haut pendant la montée d'une grosse bosse (pour attraper le deltaplane !)
+            gliderTimer: 0,          // Temps de vol en Deltaplane (600 frames = 10 secondes !)
+            onRampJump: false,       // Slide effectué sur une rampe
+            isGrindingRamp: false,   // Actuellement en train de glisser sur une rampe
+            jumpedWithUpArrow: false,// Permet de sauter normalement avec ⬆️ ou ESPACE sans bloquer
+            airFrames: 0,            // Temps passé en l'air
+            isDoingTrick: false,     // Flèche du haut maintenue en l'air (skis sur le côté)
+            trickAngle: 0,           // Angle d'inclinaison des skis sur le côté pendant la figure
+            trickTime: 0             // Durée de maintien de la figure en l'air
+        };
+
+        let eagle = { x: 0, y: -595, z: 310, targetY: -595, targetZ: 310 };
+        let obstacles = [];
+        let sideScenery = []; // Chalets et sapins enneigés sur les bords de piste
+        let particles = [];
+        let windLines = [];
+        let skiTracks = []; // Double traînée continue de carving derrière les skis
+        let snowSparkles = []; // Cristaux et sillons longitudinaux dans la neige (plus de traits horizontaux !)
+
+        // Initialisation de la texture de neige (sillons dans le sens de la glisse + cristaux)
+        function initSnowTexture() {
+            snowSparkles = [];
+            for (let i = 0; i < 130; i++) {
+                snowSparkles.push({
+                    x: (Math.random() - 0.5) * WORLD_WIDTH * 2.4,
+                    z: Math.random() * 4400,
+                    len: 90 + Math.random() * 220, // Sillon dans le sens Z de la descente
+                    width: 1.2 + Math.random() * 2.2,
+                    isSparkle: Math.random() > 0.65,
+                    alpha: 0.25 + Math.random() * 0.45
+                });
+            }
+        }
+
+        // --- CONTRÔLES (ESPACE ou ⬆️ = Sauter au sol | ⬆️ en l'air = Skis sur le côté !) ---
+        let keys = { left: false, right: false, up: false };
+        window.addEventListener('keydown', e => {
+            // Pendant la vidéo d'intro, ESPACE, ENTRÉE ou ÉCHAP permet aussi de passer la cinématique !
+            if (state === 'VIDEO') {
+                if (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape') {
+                    e.preventDefault();
+                    skipVideo();
+                }
+                return;
+            }
+            // Sur la fenêtre explicative des règles, ESPACE ou ENTRÉE lance directement la partie !
+            if (state === 'RULES') {
+                if (e.code === 'Space' || e.code === 'Enter') {
+                    e.preventDefault();
+                    startGameFromRules();
+                }
+                return;
+            }
+            if (state !== 'PLAY') return;
+            if (bgMusic && bgMusic.paused && !isMusicMuted) bgMusic.play().catch(() => {});
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA' || e.code === 'KeyQ') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+                if (player.isRidingMogul) player.wantsMegaJump = true;
+                else if (player.grounded && player.gliderTimer <= 0) jump(false);
+            }
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'KeyZ') {
+                e.preventDefault();
+                if (player.isRidingMogul) player.wantsMegaJump = true;
+                if (!keys.up) {
+                    // Si la marmotte est au sol (hors montée de bosse), appuyer sur ⬆️ permet aussi de sauter normalement !
+                    if (player.grounded && !player.isRidingMogul && player.gliderTimer <= 0) {
+                        jump(true);
+                    } else {
+                        // Si elle est déjà en l'air (ex: bosse, ou saut Espace), ⬆️ incline immédiatement les skis !
+                        player.jumpedWithUpArrow = false;
+                    }
+                }
+                keys.up = true;
+            }
+        });
+        window.addEventListener('keyup', e => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA' || e.code === 'KeyQ') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'KeyZ') keys.up = false;
+        });
+
+        // Contrôles tactiles
+        document.getElementById('btnLeft').addEventListener('touchstart', (e)=> { e.preventDefault(); keys.left = true; });
+        document.getElementById('btnLeft').addEventListener('touchend', ()=> { keys.left = false; });
+        document.getElementById('btnRight').addEventListener('touchstart', (e)=> { e.preventDefault(); keys.right = true; });
+        document.getElementById('btnRight').addEventListener('touchend', ()=> { keys.right = false; });
+        document.getElementById('btnJump').addEventListener('touchstart', (e)=> { e.preventDefault(); if (player.grounded && !player.isRidingMogul) jump(false); else keys.up = true; });
+        document.getElementById('btnJump').addEventListener('touchend', ()=> { keys.up = false; });
+
+        function jump(fromUpArrow = false) {
+            if (player.grounded) {
+                player.vy = -16.8; // Saut de base haut et réactif (permet de prendre les rampes facilement et de retomber normalement) !
+                player.grounded = false;
+                player.isRidingMogul = false;
+                player.onMogulJump = false;
+                player.onRampJump = false;
+                player.isGrindingRamp = false;
+                player.jumpedWithUpArrow = fromUpArrow;
+                player.airFrames = 0;
+                player.trickTime = 0;
+            }
+        }
+
+        // Saut spécial propulsé automatiquement en haut d'une bosse (plus haut pour donner du style à la figure !)
+        function launchMogulJump(isMega = false) {
+            if (isMega) {
+                if (player.y > -135) player.y = -145;
+                // Saut très haut sur la super bosse pour aller chercher le deltaplane en faisant une figure !
+                player.vy = -21.5;
+            } else {
+                if (player.y > -85) player.y = -95; // Décollage depuis la lèvre haute de la bosse !
+                player.vy = -20.2; // Saut plus haut après une bosse pour que la figure ait du style !
+            }
+            player.grounded = false;
+            player.isRidingMogul = false;
+            player.wantsMegaJump = false;
+            player.onMogulJump = true;
+            player.onRampJump = false;
+            player.isGrindingRamp = false;
+            player.jumpedWithUpArrow = false;
+            player.airFrames = 0;
+            player.trickTime = 0;
+            // Gerbe de poudreuse au décollage de la lèvre de la bosse
+            for (let i = 0; i < 12; i++) {
+                particles.push({
+                    x: player.x + (Math.random() - 0.5) * 90,
+                    y: player.y, z: player.z,
+                    size: 4 + Math.random() * 6,
+                    vx: (Math.random() - 0.5) * 12, vy: -3 - Math.random() * 5,
+                    color: "#ffffff", alpha: 1
+                });
+            }
+        }
+
+        // --- GESTION INTRO & FENÊTRE EXPLICATIVE DES RÈGLES ---
+        function skipVideo() {
+            if (document.activeElement) document.activeElement.blur();
+            let vid = document.getElementById("introVideo");
+            if (vid) vid.pause();
+            showRulesScreen(); // Affiche la fenêtre explicative des règles avant que la partie commence !
+        }
+
+        function showRulesScreen() {
+            if (document.activeElement) document.activeElement.blur();
+            prepareGameWorld();
+            state = 'RULES';
+            document.getElementById("videoContainer").style.display = "none";
+            document.getElementById("overlayScreen").style.display = "none";
+            document.getElementById("rulesScreen").style.display = "flex";
+        }
+
+        function startGameFromRules() {
+            if (document.activeElement) document.activeElement.blur();
+            document.getElementById("rulesScreen").style.display = "none";
+            initGame();
+        }
+
+        // Calcule le décalage X de la piste à une distance Z avec transition ultra-fluide (zéro saccade !)
+        function getTrackCurveOffset(z) {
+            let dz = Math.max(0, z - player.z);
+            // L'amplitude de l'ondulation est lissée par currentCurve (sans Math.abs brusque !)
+            return currentCurve * Math.pow(dz, 1.48) * 0.0085 + Math.sin((z + groundScroll) * 0.0014) * 85 * currentCurve;
+        }
+
+        // --- MOTEUR 3D : VUE PLONGEANTE ET PENTE ENCORE PLUS RAIDE (SANS DÉFORMATION AU LOIN) ---
+        function project(x, y, z) {
+            if (z < 1) z = 1; 
+            const scale = FOV / (FOV + z * 0.65);
+            // Pente encore plus accentuée : remonte jusqu'à Y=66px au sommet et plonge jusqu'à Y=492px en bas !
+            const curveX = getTrackCurveOffset(z);
+            const projX = (LOGIC_W / 2) + ((x + curveX - cameraX) * scale);
+            const persp = FOV / (FOV + z * 0.52);
+            const lin = Math.max(0, 1 - z / 4500);
+            const groundY = 50 + 442 * (0.36 * persp + 0.64 * Math.pow(lin, 1.22));
+            const projY = groundY + (y * scale);
+            return { x: projX, y: projY, scale: scale };
+        }
+
+        // --- DÉCOR RICHE : CIEL ALPIN, MASSIFS ROCHEUX ET PLAINE ENNEIGÉE EN CONTREBAS ---
+        function drawComplexBackground() {
+            let valleyBottomY = 165; // Jonction haute avec la crête de la piste pour maximiser le mur de pente !
+
+            // 1. Ciel alpin lumineux
+            let skyGradient = ctx.createLinearGradient(0, 0, 0, 120);
+            skyGradient.addColorStop(0, '#09304e'); 
+            skyGradient.addColorStop(0.45, '#2980b9');
+            skyGradient.addColorStop(0.85, '#74b9ff'); 
+            skyGradient.addColorStop(1, '#dff9fb'); 
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, LOGIC_W, 120);
+
+            // On remonte encore l'horizon montagneux et la plaine (-82px) pour accompagner la pente accrue !
+            ctx.save();
+            ctx.translate(0, -82);
+
+            // Soleil d'altitude et halo doux
+            let sunX = 650 - bgScrollX * 0.15;
+            let sunGrad = ctx.createRadialGradient(sunX, 46, 5, sunX, 46, 68);
+            sunGrad.addColorStop(0, 'rgba(255, 250, 220, 0.95)');
+            sunGrad.addColorStop(0.3, 'rgba(255, 235, 160, 0.45)');
+            sunGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = sunGrad;
+            ctx.beginPath(); ctx.arc(sunX, 46, 68, 0, Math.PI*2); ctx.fill();
+
+            // 2. Chaîne de montagnes lointaines (enneigées et bleutées par la brume)
+            let farShift = (bgScrollX * 0.3) % 800;
+            for (let rep = -1; rep <= 1; rep++) {
+                let ox = rep * 800 - farShift;
+                ctx.fillStyle = "#5f85a8";
+                ctx.beginPath();
+                ctx.moveTo(ox, 132);
+                ctx.lineTo(ox + 90, 48); ctx.lineTo(ox + 190, 90); ctx.lineTo(ox + 310, 34);
+                ctx.lineTo(ox + 440, 84); ctx.lineTo(ox + 570, 40); ctx.lineTo(ox + 700, 78);
+                ctx.lineTo(ox + 800, 132);
+                ctx.closePath();
+                ctx.fill();
+
+                // Faces éclairées des montagnes lointaines
+                ctx.fillStyle = "#89aecb";
+                [[90, 48, 190, 90], [310, 34, 440, 84], [570, 40, 700, 78]].forEach(pk => {
+                    ctx.beginPath();
+                    ctx.moveTo(ox + pk[0], pk[1]);
+                    ctx.lineTo(ox + pk[2], pk[3]);
+                    ctx.lineTo(ox + pk[0] + 15, 132);
+                    ctx.closePath();
+                    ctx.fill();
+                });
+            }
+
+            // 3. Massifs alpins intermédiaires avec faces ombragées et glaciers
+            let midShift = (bgScrollX * 0.6) % 800;
+            for (let rep = -1; rep <= 1; rep++) {
+                let ox = rep * 800 - midShift;
+                ctx.fillStyle = "#2c4760";
+                ctx.beginPath();
+                ctx.moveTo(ox, 138);
+                ctx.lineTo(ox + 130, 58); ctx.lineTo(ox + 260, 108); ctx.lineTo(ox + 420, 46);
+                ctx.lineTo(ox + 560, 104); ctx.lineTo(ox + 680, 64); ctx.lineTo(ox + 800, 138);
+                ctx.closePath();
+                ctx.fill();
+
+                [[130, 58, 210, 108], [420, 46, 520, 104], [680, 64, 770, 124]].forEach(pk => {
+                    ctx.fillStyle = "#3f6280";
+                    ctx.beginPath();
+                    ctx.moveTo(ox + pk[0], pk[1]);
+                    ctx.lineTo(ox + pk[2], pk[3]);
+                    ctx.lineTo(ox + pk[0] - 10, 138);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = "#f5f9fc";
+                    ctx.beginPath();
+                    ctx.moveTo(ox + pk[0], pk[1]);
+                    ctx.lineTo(ox + pk[0] - 28, pk[1] + 28);
+                    ctx.lineTo(ox + pk[0] - 8, pk[1] + 20);
+                    ctx.lineTo(ox + pk[0] + 5, pk[1] + 32);
+                    ctx.lineTo(ox + pk[0] + 32, pk[1] + 24);
+                    ctx.closePath();
+                    ctx.fill();
+                });
+            }
+
+            // 4. LA PLAINE EN BAS DE LA VALLÉE (Mélange de prairies alpines ET de manteau neigeux hivernal !)
+            let plainGrad = ctx.createLinearGradient(0, 130, 0, valleyBottomY);
+            plainGrad.addColorStop(0, "#8ab088");   // Fond de vallée
+            plainGrad.addColorStop(0.35, "#5c9468"); // Prairies d'altitude
+            plainGrad.addColorStop(0.70, "#b8d8d8"); // Transition givrée
+            plainGrad.addColorStop(1, "#eaf4fc");   // Plaine enneigée au pied de la piste
+            ctx.fillStyle = plainGrad;
+            ctx.fillRect(0, 130, LOGIC_W, valleyBottomY - 130);
+
+            let plainShift = (bgScrollX * 0.85) % 800;
+            for (let rep = -1; rep <= 1; rep++) {
+                let ox = rep * 800 - plainShift;
+
+                // Grandes collines et combes enneigées dans la plaine en bas !
+                ctx.fillStyle = "rgba(235, 246, 255, 0.85)";
+                ctx.beginPath();
+                ctx.ellipse(ox + 140, 154, 130, 14, 0.04, 0, Math.PI * 2);
+                ctx.ellipse(ox + 490, 158, 165, 16, -0.03, 0, Math.PI * 2);
+                ctx.ellipse(ox + 730, 150, 110, 12, 0.02, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Collines d'alpage vertes qui alternent avec la neige
+                ctx.fillStyle = "rgba(95, 155, 95, 0.55)";
+                ctx.beginPath();
+                ctx.ellipse(ox + 310, 146, 120, 12, -0.04, 0, Math.PI * 2);
+                ctx.ellipse(ox + 640, 144, 110, 10, 0.03, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Rivière glacée qui serpente au fond de la plaine
+                ctx.strokeStyle = "#74b9ff";
+                ctx.lineWidth = 3.5;
+                ctx.beginPath();
+                ctx.moveTo(ox + 80, 131);
+                ctx.bezierCurveTo(ox + 180, 144, ox + 40, 156, ox + 160, 174);
+                ctx.stroke();
+                // Berges enneigées de la rivière
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Petit village alpin sous la neige au creux de la vallée
+                let vx = ox + 380, vy = 146;
+                [[-28, 4], [-14, 7], [12, 6], [26, 3], [-5, 10]].forEach(ch => {
+                    ctx.fillStyle = "#d35400"; // Façades bois
+                    ctx.fillRect(vx + ch[0], vy + ch[1], 7, 5);
+                    // Toits couverts de neige blanche !
+                    ctx.fillStyle = "#ffffff";
+                    ctx.beginPath();
+                    ctx.moveTo(vx + ch[0] - 1.5, vy + ch[1]);
+                    ctx.lineTo(vx + ch[0] + 3.5, vy + ch[1] - 4.5);
+                    ctx.lineTo(vx + ch[0] + 8.5, vy + ch[1]);
+                    ctx.fill();
+                });
+                // Clocher du village
+                ctx.fillStyle = "#f5f6fa";
+                ctx.fillRect(vx, vy - 2, 5, 10);
+                ctx.fillStyle = "#2c3e50";
+                ctx.beginPath(); ctx.moveTo(vx - 1, vy - 2); ctx.lineTo(vx + 2.5, vy - 12); ctx.lineTo(vx + 6, vy - 2); ctx.fill();
+
+                // Lisière de sapins enneigés tout en bas de la vallée
+                for (let tx = 0; tx < 800; tx += 20) {
+                    let th = 9 + (tx * 7 % 7);
+                    let ty = 164 + (tx * 3 % 9);
+                    ctx.fillStyle = "#1b4332";
+                    ctx.beginPath();
+                    ctx.moveTo(ox + tx, ty - th);
+                    ctx.lineTo(ox + tx - 5, ty);
+                    ctx.lineTo(ox + tx + 5, ty);
+                    ctx.fill();
+                    // Pointe blanche de neige sur les sapins de la vallée
+                    ctx.fillStyle = "#ecf0f1";
+                    ctx.beginPath();
+                    ctx.moveTo(ox + tx, ty - th);
+                    ctx.lineTo(ox + tx - 2.5, ty - th * 0.5);
+                    ctx.lineTo(ox + tx + 2.5, ty - th * 0.5);
+                    ctx.fill();
+                }
+            }
+            ctx.restore();
+        }
+
+        function drawGround() {
+            const zFar = 4500;
+            const steps = 60;
+
+            // 1. Fond de neige poudreuse lisse (remonte jusqu'à Y=66 pour suivre la pente encore plus raide !)
+            let snowBaseGrad = ctx.createLinearGradient(0, 66, 0, LOGIC_H);
+            snowBaseGrad.addColorStop(0, "#d4e6f9");   // Haut/fond de la pente ombragé
+            snowBaseGrad.addColorStop(0.35, "#e8f3fe"); // Milieu de pente
+            snowBaseGrad.addColorStop(1, "#ffffff");   // Neige fraîche éclatante sous les skis
+            ctx.fillStyle = snowBaseGrad;
+            ctx.fillRect(0, 66, LOGIC_W, LOGIC_H - 66);
+
+            // Couloir central de la piste damée (plus clair que les bords hors-piste)
+            ctx.fillStyle = "rgba(255, 255, 255, 0.48)";
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+                let z = (i / steps) * zFar;
+                let pL = project(-WORLD_WIDTH * 0.5, 0, z);
+                if (i === 0) ctx.moveTo(pL.x, pL.y);
+                else ctx.lineTo(pL.x, pL.y);
+            }
+            for (let i = steps; i >= 0; i--) {
+                let z = (i / steps) * zFar;
+                let pR = project(WORLD_WIDTH * 0.5, 0, z);
+                ctx.lineTo(pR.x, pR.y);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // 2. Vraie texture de glisse : sillons longitudinaux dans le sens de la pente + cristaux de neige scintillants
+            for (let i = 0; i < snowSparkles.length; i++) {
+                let s = snowSparkles[i];
+                if (state === 'PLAY') {
+                    s.z -= currentSpeed;
+                    if (s.z < 15) {
+                        s.z += 4350;
+                        s.x = (Math.random() - 0.5) * WORLD_WIDTH * 2.4;
+                    }
+                }
+                let p1 = project(s.x, 0, s.z);
+                let p2 = project(s.x, 0, s.z + s.len);
+                if (s.isSparkle) {
+                    // Petit cristal de neige brillant au soleil
+                    ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha + 0.3})`;
+                    let r = Math.max(1.2, 3.5 * p1.scale);
+                    ctx.fillRect(p1.x - r/2, p1.y - r/2, r, r);
+                } else {
+                    // Sillon de neige longitudinal (dans le sens de la descente, jamais horizontal !)
+                    ctx.strokeStyle = `rgba(175, 208, 240, ${s.alpha})`;
+                    ctx.lineWidth = Math.max(0.8, s.width * p1.scale);
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            }
+
+            // 3. Double traînée continue de neige / carving derrière les skis de la marmotte !
+            for (let i = skiTracks.length - 1; i >= 0; i--) {
+                let tr = skiTracks[i];
+                if (state === 'PLAY') tr.z -= currentSpeed;
+                if (tr.z < 5) { skiTracks.splice(i, 1); continue; }
+            }
+            if (skiTracks.length > 1) {
+                [-28, 28].forEach(skiOffset => {
+                    // Sillon creusé dans la neige
+                    ctx.strokeStyle = "rgba(155, 192, 228, 0.75)";
+                    ctx.lineWidth = 4.5;
+                    ctx.lineCap = "round";
+                    ctx.beginPath();
+                    for (let i = 0; i < skiTracks.length; i++) {
+                        let tr = skiTracks[i];
+                        let p = project(tr.x + skiOffset, 0, tr.z);
+                        if (i === 0) ctx.moveTo(p.x, p.y);
+                        else ctx.lineTo(p.x, p.y);
+                    }
+                    ctx.stroke();
+
+                    // Rebord d'écume de neige blanche soulevée le long de la trace
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for (let i = 0; i < skiTracks.length; i++) {
+                        let tr = skiTracks[i];
+                        let p = project(tr.x + skiOffset + 5, 0, tr.z);
+                        if (i === 0) ctx.moveTo(p.x, p.y);
+                        else ctx.lineTo(p.x, p.y);
+                    }
+                    ctx.stroke();
+                });
+            }
+
+            // 4. Bords de piste incurvés (Filets Rouges + Piquets de Piste Noire qui suivent les virages !)
+            ctx.strokeStyle = "rgba(180, 210, 240, 0.55)";
+            ctx.lineWidth = 10;
+            [-WORLD_WIDTH/2, WORLD_WIDTH/2].forEach(borderX => {
+                ctx.beginPath();
+                for (let z = 10; z <= zFar; z += 150) {
+                    let p = project(borderX, 0, z);
+                    if (z === 10) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+            });
+
+            ctx.strokeStyle = "rgba(231, 76, 60, 0.85)";
+            ctx.lineWidth = 3.5;
+            [-WORLD_WIDTH/2, WORLD_WIDTH/2].forEach(borderX => {
+                ctx.beginPath();
+                for (let z = 10; z <= zFar; z += 150) {
+                    let p = project(borderX, 0, z);
+                    if (z === 10) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+            });
+
+            // Piquets noirs et rouges sur les bords qui suivent les virages
+            let poleSpacing = 380;
+            let firstPoleZ = poleSpacing - (groundScroll % poleSpacing);
+            for (let z = firstPoleZ; z < 4200; z += poleSpacing) {
+                [-WORLD_WIDTH/2, WORLD_WIDTH/2].forEach(borderX => {
+                    let pBase = project(borderX, 0, z);
+                    let pTop = project(borderX, -200, z);
+                    ctx.strokeStyle = "#2c3e50";
+                    ctx.lineWidth = Math.max(1.5, 8 * pBase.scale);
+                    ctx.beginPath();
+                    ctx.moveTo(pBase.x, pBase.y);
+                    ctx.lineTo(pTop.x, pTop.y);
+                    ctx.stroke();
+                    ctx.strokeStyle = "#e74c3c";
+                    ctx.beginPath();
+                    ctx.moveTo(pTop.x, pTop.y);
+                    ctx.lineTo(pTop.x, pTop.y + (pBase.y - pTop.y) * 0.35);
+                    ctx.stroke();
+                });
+            }
+        }
+
+        // --- EFFETS (Vent toujours actif, Traces, Neige & Flammes sous les skis !) ---
+        function updateEffects(onGrass) {
+            // Traces de skis derrière la marmotte
+            if (state === 'PLAY' && player.grounded && !player.isRidingMogul) {
+                skiTracks.push({ x: player.x, z: player.z - 10 });
+            }
+
+            // Particules de FLAMMES sous les skis UNIQUEMENT lorsqu'on fait une figure sur une BOSSE ou sur une RAMPE (jamais lors d'un saut normal hors bosse/rampe) !
+            let skisOnFire = !player.grounded && player.gliderTimer <= 0 && (((player.onMogulJump || player.onRampJump) && player.isDoingTrick && player.trickAngle > 0.25) || player.isGrindingRamp);
+            if (state === 'PLAY' && skisOnFire) {
+                const fireColors = ["#ff2a00", "#ff6b00", "#ff9f1a", "#ffea00", "#ffffff"];
+                [-26, 26].forEach(skiOffset => {
+                    for (let i = 0; i < 2; i++) {
+                        particles.push({
+                            x: player.x + skiOffset + (Math.random() - 0.5) * 18,
+                            y: player.y - 5 + (Math.random() - 0.5) * 12,
+                            z: player.z - 8 - Math.random() * 15,
+                            size: 4 + Math.random() * 5.5,
+                            vx: -player.dx * 0.1 + (Math.random() - 0.5) * 6,
+                            vy: -2.5 - Math.random() * 4.5,
+                            isFire: true,
+                            color: fireColors[Math.floor(Math.random() * fireColors.length)],
+                            alpha: 1
+                        });
+                    }
+                });
+            }
+
+            // Neige projetée par les skis au sol
+            if (state === 'PLAY' && player.grounded) {
+                let count = onGrass ? 5 : 2; 
+                for (let i = 0; i < count; i++) {
+                    let skiOffset = Math.random() > 0.5 ? 28 : -28;
+                    particles.push({
+                        x: player.x + skiOffset + (Math.random()*16 - 8),
+                        y: player.y, z: player.z - 5,
+                        size: 3 + Math.random()*5,
+                        vx: -player.dx*0.15 + (Math.random()-0.5)*5, vy: -2 - Math.random()*3,
+                        color: onGrass ? "#5c4033" : "#ffffff", alpha: 1
+                    });
+                }
+            }
+
+            // Vent de vitesse (arrive de face pendant qu'on descend la pente)
+            if (state === 'PLAY' && Math.random() < (currentSpeed / 35)) {
+                windLines.push({
+                    x: player.x + (Math.random() - 0.5) * WORLD_WIDTH * 1.4,
+                    y: -50 - Math.random() * 350,
+                    z: 3500, 
+                    speed: currentSpeed * 3.2, 
+                    length: 250 + Math.random() * 500,
+                    alpha: 0.35 + Math.random() * 0.4,
+                    isGliderWind: false
+                });
+            }
+
+            // EFFET DE VENT INTENSE & COURANTS D'AIR EN DELTAPLANE (filets d'air rapides autour de la marmotte en vol !)
+            if (state === 'PLAY' && player.gliderTimer > 0) {
+                for (let w = 0; w < 3; w++) {
+                    windLines.push({
+                        x: player.x + (Math.random() - 0.5) * 1500,
+                        y: player.y + (Math.random() - 0.5) * 220,
+                        z: 2600 + Math.random() * 1200,
+                        speed: currentSpeed * 4.8,
+                        length: 480 + Math.random() * 650,
+                        alpha: 0.55 + Math.random() * 0.35,
+                        isGliderWind: true
+                    });
+                }
+                // Tourbillons d'air au bout des ailes du deltaplane
+                [-115, 115].forEach(wingSide => {
+                    particles.push({
+                        x: player.x + wingSide + (Math.random() - 0.5) * 12,
+                        y: player.y - 140 + (Math.random() - 0.5) * 10,
+                        z: player.z - 15,
+                        size: 2.8 + Math.random() * 3,
+                        vx: -player.dx * 0.08 + (Math.random() - 0.5) * 3,
+                        vy: (Math.random() - 0.5) * 1.5,
+                        isFire: true, // Flotte dans l'air sans retomber au sol
+                        color: "rgba(220, 248, 255, 0.85)",
+                        alpha: 0.85
+                    });
+                });
+            }
+        }
+
+        function drawEffects() {
             for (let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
-                p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.alpha -= 0.05;
-                if(p.alpha <= 0 || p.y > 0) { particles.splice(i, 1); continue; }
-                
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += p.isFire ? -0.15 : 0.5; // Les flammes/filets d'air montent tandis que la neige retombe !
+                p.z -= currentSpeed * (p.isFire ? 0.45 : 0.3);
+                p.alpha -= p.isFire ? 0.07 : 0.05;
+                if (p.alpha <= 0 || (!p.isFire && p.y > 0) || p.z < 5) { particles.splice(i, 1); continue; }
                 let proj = project(p.x, p.y, p.z);
                 ctx.fillStyle = p.color; ctx.globalAlpha = p.alpha;
                 ctx.beginPath(); ctx.arc(proj.x, proj.y, p.size * proj.scale, 0, Math.PI * 2); ctx.fill();
             }
             ctx.globalAlpha = 1;
+
+            for (let i = windLines.length - 1; i >= 0; i--) {
+                let w = windLines[i];
+                w.z -= w.speed;
+                if (w.z < 10) { windLines.splice(i, 1); continue; }
+                
+                let pStart = project(w.x, w.y, w.z);
+                let pEnd = project(w.x, w.y, w.z + w.length);
+                
+                ctx.strokeStyle = w.isGliderWind ? `rgba(215, 248, 255, ${w.alpha})` : `rgba(255, 255, 255, ${w.alpha})`;
+                ctx.lineWidth = (w.isGliderWind ? 3.2 : 2) * pStart.scale;
+                ctx.beginPath(); ctx.moveTo(pStart.x, pStart.y); ctx.lineTo(pEnd.x, pEnd.y); ctx.stroke();
+            }
         }
 
-        // --- MÉCANIQUE ---
-        function handleObstacles() {
-            if (frames % 20 === 0) {
-                let rand = Math.random();
-                let type = "tree";
-                if (rand > 0.4) type = "rock";
-                if (rand > 0.6) type = "grass"; 
+        // --- GESTION DES 2 ERREURS (HERBE OU RONDIN) : 1ère fois = l'aigle s'approche, 2ème fois = l'aigle nous mange ! ---
+        function triggerEagleStrike(sourceType) {
+            grassTouches++;
+            currentSpeed = Math.max(15, currentSpeed - 4.5);
 
-                obstacles.push({
-                    x: -WORLD_WIDTH/2 + Math.random() * WORLD_WIDTH,
-                    y: 0, z: 2500, type: type,
-                    width: type === "tree" ? 160 : (type === "grass" ? 280 : 100),
-                    height: type === "tree" ? 280 : (type === "grass" ? 10 : 80)
+            // Petites particules d'impact (bois ou herbe)
+            for (let k = 0; k < 8; k++) {
+                particles.push({
+                    x: player.x + (Math.random() - 0.5) * 70,
+                    y: -10, z: player.z,
+                    size: 4 + Math.random() * 5,
+                    vx: (Math.random() - 0.5) * 10, vy: -3 - Math.random() * 4,
+                    color: sourceType === "log" ? "#6d4c41" : "#388e3c", alpha: 1
                 });
             }
 
-            let onGrass = false;
+            if (grassTouches === 1) {
+                let pProj = project(player.x, -210, player.z);
+                trickTextPopups.push({
+                    x: pProj.x,
+                    y: pProj.y,
+                    text: "⚠️",
+                    size: 38,
+                    color: "#ff5252",
+                    alpha: 1.25
+                });
+            } else if (grassTouches >= 2) {
+                if (sourceType === "log") {
+                    triggerEagleCatch(
+                        "TU AS TOUCHÉ UN 2ème RONDIN !",
+                        "Tu as percuté un rondin sans sauter (ESPACE) alors que l'aigle était déjà juste au-dessus de toi !"
+                    );
+                } else {
+                    triggerEagleCatch(
+                        "TROP RALENTI DANS L'HERBE !",
+                        "Tu es passé une 2ème fois dans une zone d'herbe : à force de ralentir, l'aigle t'a rattrapé !"
+                    );
+                }
+            }
+        }
+
+        let pendingGameOverTitle = "PARTIE TERMINÉE";
+        let pendingGameOverReason = "";
+        let cardsCollected = 0; // Cartes "Animal" gagnées pendant la partie (partagées avec index.html !)
+        let groundCardSpawnedThisRun = false; // Maximum 1 carte sur la piste par partie (~1 fois toutes les 4 parties après 6 figures) !
+
+        // Fonction appelée quand la marmotte attrape un item Carte Animal (sur la piste ou en deltaplane derrière les nuages)
+        function collectAnimalCard() {
+            cardsCollected++;
+            score += 250;
+            const cardEl = document.getElementById("cardCount");
+            if (cardEl) cardEl.innerText = cardsCollected;
+
+            // Enregistre la carte Animal gagnée dans le localStorage partagé avec index.html !
+            try {
+                let totalBonus = parseInt(localStorage.getItem("bonusAnimauxGagnes")) || 0;
+                localStorage.setItem("bonusAnimauxGagnes", totalBonus + 1);
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: "ANIMAL_CARD_WON" }, "*");
+                }
+            } catch (e) {}
+
+            // Petit indicateur visuel discret de carte récupérée
+            let pProj = project(player.x, player.y - 170, player.z);
+            trickTextPopups.push({
+                x: pProj.x,
+                y: pProj.y,
+                text: "🐾 +1 Carte !",
+                size: 24,
+                color: "#ffeb3b",
+                alpha: 1.25
+            });
+        }
+
+        // Séquence aérienne systématique en Deltaplane : rideau de petits nuages bien au loin + Carte Animal juste derrière !
+        function spawnGliderSkyChallenge() {
+            // On choisit un couloir d'ouverture aléatoire à travers les petits nuages
+            let gapSide = Math.random() > 0.5 ? 1 : -1;
+            let cardX = gapSide * 340;
+
+            // Vague 1 de petits nuages placée LOIN DEVANT (z = 4200 et 4650) pour laisser largement le temps de les voir venir et de se décaler !
+            obstacles.push({
+                x: -gapSide * 440, y: -215, z: 4200, type: "skyCloud",
+                width: 310, height: 135, lengthZ: 110, counted: false
+            });
+            obstacles.push({
+                x: gapSide * 120, y: -215, z: 4650, type: "skyCloud",
+                width: 300, height: 130, lengthZ: 110, counted: false
+            });
+
+            // Vague 2 de petits nuages plus loin devant la carte (z = 5900 et 6350) : protège l'accès à l'item !
+            obstacles.push({
+                x: cardX - gapSide * 460, y: -215, z: 5900, type: "skyCloud",
+                width: 320, height: 140, lengthZ: 110, counted: false
+            });
+            obstacles.push({
+                x: cardX + gapSide * 290, y: -215, z: 6350, type: "skyCloud",
+                width: 310, height: 135, lengthZ: 110, counted: false
+            });
+
+            // Item Carte Animal placé SYSTÉMATIQUEMENT en l'air juste derrière les petits nuages (z = 7100) !
+            obstacles.push({
+                x: cardX, y: -215, z: 7100, type: "skyAnimalCard",
+                width: 150, height: 195, lengthZ: 80, counted: false
+            });
+        }
+
+        // Déclenche l'attaque finale où l'aigle fonce en piqué sur la marmotte, puis affiche la raison exacte de la défaite !
+        function triggerEagleCatch(reasonTitle, reasonDetail) {
+            if (state === 'EAGLE_ATTACK' || state === 'GAMEOVER') return;
+            state = 'EAGLE_ATTACK';
+            eagleAttackTimer = 34;
+            pendingGameOverTitle = reasonTitle || "PARTIE TERMINÉE";
+            pendingGameOverReason = reasonDetail || "Tu as chuté sur la piste et l'aigle en a profité pour t'attraper !";
+            player.gliderTimer = 0;
+            player.isDoingTrick = false;
+            player.trickAngle = 0;
+            keys.left = false; keys.right = false; keys.up = false;
+        }
+
+        // --- OBSTACLES & DÉCOR DE BORD DE PISTE (CHALETS ET SAPINS ENNEIGÉS) ---
+        function handleObstacles() {
+            distSinceLastObstacle += currentSpeed;
+            distSinceLastScenery += currentSpeed;
+
+            // 1. Génération régulière d'arbres enneigés et de chalets sur les bords de piste (hors-piste)
+            if (distSinceLastScenery > 260) {
+                let side = Math.random() > 0.5 ? 1 : -1;
+                let isChalet = Math.random() < 0.16; // ~16% de chance d'avoir un beau chalet savoyard
+                sideScenery.push({
+                    x: side * (WORLD_WIDTH * 0.62 + Math.random() * 1100),
+                    y: 0,
+                    z: 4200,
+                    type: isChalet ? "chalet" : "snowTree",
+                    width: isChalet ? 680 : (340 + Math.random() * 140),
+                    height: isChalet ? 520 : (540 + Math.random() * 200),
+                    isScenery: true
+                });
+                distSinceLastScenery = 0;
+            }
+            for (let i = sideScenery.length - 1; i >= 0; i--) {
+                sideScenery[i].z -= currentSpeed;
+                if (sideScenery[i].z < 5) sideScenery.splice(i, 1);
+            }
+
+            // 2. Génération des obstacles sur la piste (-5% bosses normales = 5%, et ajout d'une GROSSE BOSSE TRÈS RARE avec DELTAPLANE !)
+            let spawnInterval = Math.max(440, 960 - (currentSpeed - 20) * 8);
+            if (distSinceLastObstacle > spawnInterval) {
+                let rand = Math.random();
+                let type = "tree";                     // 26% sapin (0.00 à 0.26)
+                if (rand >= 0.26) type = "rock";       // 23% rocher (0.26 à 0.49)
+                if (rand >= 0.49) type = "log";        // 22% tronc d'arbre couché / rondin (0.49 à 0.71)
+                if (rand >= 0.71) type = "grass";      // 16% herbe (0.71 à 0.87)
+                if (rand >= 0.880) type = "mogul";     // 5% BOSSE 3D normale (0.880 à 0.930)
+                if (rand >= 0.930) type = "megaMogul"; // Super bosse / super rampe encore plus rare (~0.38% : 0.930 à 0.9338) !
+                if (rand >= 0.9338) type = "ramp";     // ~6.6% RAMPE dans le sens de la piste (0.9338 à 1.00)
+
+                // Probabilité d'apparition d'un item "Carte Animal" (🐾) sur la piste :
+                // - AUCUNE apparition avant d'avoir réussi au moins 6 figures sur des bosses/rampes (tricksLanded >= 6) !
+                // - Probabilité très basse (~0.6% par vague après 6 figures, augmentant légèrement avec chaque figure supplémentaire)
+                //   pour n'apparaître qu'environ 1 fois toutes les 4 parties en moyenne !
+                let bonusCardChance = (tricksLanded >= 6) ? Math.min(0.020, 0.0055 + (tricksLanded - 6) * 0.002) : 0;
+                if (!groundCardSpawnedThisRun && player.gliderTimer <= 0 && tricksLanded >= 6 && Math.random() < bonusCardChance && type !== "megaMogul") {
+                    type = "animalCard";
+                    groundCardSpawnedThisRun = true;
+                }
+
+                // Si le joueur vole déjà en deltaplane, on remplace la grosse bosse par une bosse normale
+                if (type === "megaMogul" && player.gliderTimer > 0) type = "mogul";
+
+                let obsWidth = 260;
+                let obsHeight = 160;
+                let obsLengthZ = 0;
+                if (type === "tree")       { obsWidth = 320; obsHeight = 520; }
+                if (type === "grass")      { obsWidth = 900 + Math.random() * 650; obsHeight = 14; }
+                if (type === "log")        { obsWidth = 560; obsHeight = 115; }
+                if (type === "mogul")      { obsWidth = 360; obsHeight = 130; obsLengthZ = 520; } // Bosse 3D naturelle longue !
+                if (type === "megaMogul")  { obsWidth = 490; obsHeight = 195; obsLengthZ = 680; } // Grosse bosse très rare + Deltaplane !
+                if (type === "ramp")       { obsWidth = 240; obsHeight = 95; obsLengthZ = 720; }  // Rampe longue 3D !
+                if (type === "animalCard") { obsWidth = 145; obsHeight = 190; obsLengthZ = 80; }  // Carte Animal bonus à ramasser !
+
+                // Les obstacles apparaissent au loin dans la pente (z = 4200).
+                // Les bosses (normales et super bosses), les rampes et les cartes sont placées vers le centre de la piste (pas trop en bord de piste !).
+                let spawnX = (type === "ramp" || type === "mogul" || type === "megaMogul" || type === "animalCard")
+                    ? (Math.random() - 0.5) * (WORLD_WIDTH * 0.48)
+                    : -WORLD_WIDTH/2 + Math.random() * WORLD_WIDTH;
+
+                obstacles.push({
+                    x: spawnX,
+                    y: 0, z: 4200, type: type,
+                    width: obsWidth,
+                    height: obsHeight,
+                    lengthZ: obsLengthZ,
+                    shape: Math.floor(Math.random() * 3),
+                    counted: false,
+                    gliderTaken: false
+                });
+                distSinceLastObstacle = 0; 
+            }
+
+            let onGrassThisFrame = false;
+            let onRampThisFrame = false;
+            let onMogulRampThisFrame = false;
+            let isGliding = player.gliderTimer > 0;
+
             for (let i = obstacles.length - 1; i >= 0; i--) {
                 let obs = obstacles[i];
                 obs.z -= currentSpeed;
-                if (obs.z > player.z - 30 && obs.z < player.z + 30) {
+
+                // Gestion des obstacles aériens en DELTAPLANE (petits nuages à éviter + Carte Animal juste derrière !)
+                if (obs.type === "skyCloud") {
+                    if (isGliding && Math.abs(obs.z - player.z) < 65 && Math.abs(player.x - obs.x) < obs.width * 0.36) {
+                        // Percuter un petit nuage en deltaplane déstabilise l'aile et fait redescendre la marmotte sur la piste !
+                        player.gliderTimer = 0;
+                        player.vy = 2.2;
+                        let pProj = project(player.x, player.y - 120, player.z);
+                        trickTextPopups.push({
+                            x: pProj.x, y: pProj.y,
+                            text: "☁️ Turbulence !", size: 24, color: "#dfe6e9", alpha: 1.2
+                        });
+                        // Retire les éléments aériens restants
+                        obstacles = obstacles.filter(o => o.type !== "skyCloud" && o.type !== "skyAnimalCard");
+                        break;
+                    }
+                    if (obs.z < 5 || !isGliding) obstacles.splice(i, 1);
+                    continue;
+                }
+
+                if (obs.type === "skyAnimalCard") {
+                    if (isGliding && !obs.counted && Math.abs(obs.z - player.z) < 115 && Math.abs(player.x - obs.x) < 175) {
+                        obs.counted = true;
+                        collectAnimalCard();
+                        obstacles.splice(i, 1);
+                        continue;
+                    }
+                    if (obs.z < 5 || !isGliding) obstacles.splice(i, 1);
+                    continue;
+                }
+
+                if (obs.type === "animalCard") {
+                    if (!obs.counted && Math.abs(obs.z - player.z) < 95 && Math.abs(player.x - obs.x) < 155 && player.y > -120) {
+                        obs.counted = true;
+                        collectAnimalCard();
+                        obstacles.splice(i, 1);
+                        continue;
+                    }
+                    if (obs.z < 5) obstacles.splice(i, 1);
+                    continue;
+                }
+
+                // Si la marmotte vole en DELTAPLANE (10s), elle survole tous les obstacles terrestres sans collision !
+                if (isGliding) {
+                    let halfLen = (obs.lengthZ || 0) / 2;
+                    if (obs.z + halfLen < 5) obstacles.splice(i, 1);
+                    continue;
+                }
+
+                // Cas particulier 1 : RAMPE longitudinale dans le sens de la piste (s'étend sur 720 unités Z)
+                if (obs.type === "ramp") {
+                    let halfLen = (obs.lengthZ || 720) / 2;
+                    if (player.z > obs.z - halfLen && player.z < obs.z + halfLen) {
+                        // Zone de contact large et généreuse (175) même si la rampe est visuellement plus fine !
+                        if (Math.abs(player.x - obs.x) < 175) {
+                            // Pour prendre la rampe : il faut avoir sauté (!player.grounded) ET mettre les skis sur le côté (⬆️) !
+                            if ((!player.grounded || player.isGrindingRamp) && (keys.up || player.trickAngle > 0.15 || player.isGrindingRamp)) {
+                                onRampThisFrame = true;
+                                player.isGrindingRamp = true;
+                                player.onRampJump = true;
+                                player.grounded = false;
+                                player.y = -88; // Perché sur le rail de la rampe !
+                                player.vy = 0;
+                            } else if (Math.abs(player.x - obs.x) < 105 && player.y > -68 && !(landingBoostTimer > 0 && player.boostImmune)) {
+                                // Si on percute la rampe sans sauter (et sans immunité de boost) : l'aigle nous rattrape !
+                                triggerEagleCatch(
+                                    "CRASH SUR LA RAMPE !",
+                                    "Tu as percuté la rampe sans sauter ! Saute d'abord avec ESPACE puis maintiens la flèche du haut (⬆️) pour glisser dessus."
+                                );
+                            }
+                        }
+                    }
+                    if (obs.z + halfLen < 5) obstacles.splice(i, 1);
+                    continue;
+                }
+
+                // Cas particulier 2 : BOSSE 3D NORMALE ou GROSSE BOSSE RARE (AVEC ITEM DELTAPLANE AU SOMMET !)
+                if (obs.type === "mogul" || obs.type === "megaMogul") {
+                    let isMega = (obs.type === "megaMogul");
+                    let lenZ = obs.lengthZ || (isMega ? 680 : 520);
+                    let halfLen = lenZ / 2;
+                    let hitWidth = isMega ? 260 : 205;
+                    let lipHeight = isMega ? 150 : 100;
+
+                    // Récupération de l'item DELTAPLANE placé PLUS LOIN EN L'AIR APRÈS LA SUPER BOSSE (uniquement si on maintient bien la figure ⬆️ !)
+                    if (isMega && !obs.gliderTaken) {
+                        let gliderZ = obs.z + halfLen + 620; // Éloigné à 620 unités après la bosse pour demander un vrai long saut en figure !
+                        let isPerformingTrick = player.isDoingTrick && player.trickAngle > 0.65 && player.trickTime >= 14;
+                        if (isPerformingTrick && Math.abs(player.z - gliderZ) < 135 && Math.abs(player.x - obs.x) < 185 && player.y <= -205) {
+                            obs.gliderTaken = true;
+                            tricksLanded++;
+                            score += 150;
+                            document.getElementById("trickCount").innerText = tricksLanded;
+                            player.gliderTimer = 600; // 10 secondes de vol à 60 FPS !
+                            player.grounded = false;
+                            player.isRidingMogul = false;
+                            player.isDoingTrick = false;
+                            player.trickAngle = 0;
+                            player.vy = 0;
+                            // Fait apparaître systématiquement des petits nuages à éviter en l'air avec une Carte Animal juste derrière !
+                            spawnGliderSkyChallenge();
+                        }
+                    }
+
+                    if (player.z >= obs.z - halfLen && player.z <= obs.z + halfLen + currentSpeed) {
+                        if (Math.abs(player.x - obs.x) < hitWidth && !obs.counted) {
+                            let t = (player.z - (obs.z - halfLen)) / lenZ;
+                            t = Math.max(0, Math.min(1, t));
+                            if (t < 0.80 && player.y >= -(lipHeight + 15)) {
+                                // La marmotte gravit physiquement la pente courbée de la bosse !
+                                onMogulRampThisFrame = true;
+                                player.isRidingMogul = true;
+                                player.ridingMegaMogul = isMega;
+                                player.grounded = true;
+                                player.vy = 0;
+                                player.y = -Math.pow(t / 0.80, 1.45) * lipHeight;
+                            } else if (player.y >= -(lipHeight + 20) || player.isRidingMogul) {
+                                // Arrivée au sommet de la lèvre : éjection automatique dans les airs !
+                                obs.counted = true;
+                                launchMogulJump(isMega);
+                            }
+                        }
+                    }
+                    if (obs.z + halfLen + 780 < 5) obstacles.splice(i, 1);
+                    continue;
+                }
+
+                // Immunité totale aux obstacles pendant le boost à l'atterrissage après une bosse réussie ou une rampe réussie !
+                let isBoostImmune = (landingBoostTimer > 0 && player.boostImmune);
+
+                if (!isBoostImmune && obs.z > player.z - 55 && obs.z < player.z + 55) {
                     if (player.x > obs.x - obs.width/2 && player.x < obs.x + obs.width/2) {
-                        if (obs.type === "tree") gameOver();
-                        else if (obs.type === "rock" && player.y > -70) gameOver();
-                        else if (obs.type === "grass" && player.grounded) onGrass = true;
+                        if (obs.type === "tree") {
+                            // Sauter avec une bosse permet de sauter par-dessus les sapins !
+                            let jumpingOverTree = (player.onMogulJump && !player.grounded && player.y < -65);
+                            if (!jumpingOverTree) {
+                                triggerEagleCatch(
+                                    "TU AS PERCUTÉ UN SAPIN !",
+                                    "Tu as foncé dans un sapin ! Contourne-les avec ⬅️ / ➡️ ou prends une bosse juste avant pour sauter par-dessus."
+                                );
+                            }
+                        } else if (obs.type === "rock" && player.y > -80) {
+                            triggerEagleCatch(
+                                "TU AS PERCUTÉ UN ROCHER !",
+                                "Tu n'as pas sauté à temps par-dessus le rocher (touche ESPACE) !"
+                            );
+                        } else if (obs.type === "log" && player.y > -65) {
+                            // Rondin touché sans sauter : 1ère fois = approche l'aigle, 2ème fois = dévoré !
+                            if (!obs.counted) {
+                                obs.counted = true;
+                                triggerEagleStrike("log");
+                            }
+                        } else if (obs.type === "grass" && player.grounded) {
+                            // Zone d'herbe traversée : 1ère fois = approche l'aigle, 2ème fois = dévoré !
+                            onGrassThisFrame = true;
+                            if (!obs.counted) {
+                                obs.counted = true;
+                                triggerEagleStrike("grass");
+                            }
+                        }
                     }
                 }
-                if (obs.z < 0) obstacles.splice(i, 1);
+                if (obs.z < 5) obstacles.splice(i, 1);
             }
 
-            if (onGrass) {
-                currentSpeed = Math.max(12, currentSpeed - 2); 
-                eagleDanger = Math.min(100, eagleDanger + 1.5); 
-                addSnowParticles(true); // Terre qui vole
-            } else {
-                currentSpeed = Math.min(targetSpeed, currentSpeed + 0.5); 
-                eagleDanger = Math.max(0, eagleDanger - 0.3); 
-                if(player.grounded) addSnowParticles(false); // Neige en continu
+            // Si la marmotte quitte la bosse en cours de montée, on déclenche quand même le saut !
+            if (player.isRidingMogul && !onMogulRampThisFrame) {
+                launchMogulJump(player.ridingMegaMogul, player.wantsMegaJump || keys.up);
             }
-            if (eagleDanger >= 100) gameOver(); 
+
+            // Si on vient de quitter le bout de la rampe, petit saut de sortie pour laisser le temps de relâcher ⬆️ avant le sol !
+            if (player.isGrindingRamp && !onRampThisFrame) {
+                player.isGrindingRamp = false;
+                player.vy = -8.5;
+            }
+
+            // Vitesse : plein élan en Deltaplane, léger ralenti UNIQUEMENT si on fait une figure après une bosse, et vitesse normale sur un saut normal !
+            if (player.gliderTimer > 0) {
+                let glideSpeed = globalTargetSpeed + 4.0;
+                currentSpeed += (glideSpeed - currentSpeed) * 0.15;
+            } else if (!player.grounded && !player.isGrindingRamp && player.onMogulJump && player.isDoingTrick) {
+                let airTargetSpeed = globalTargetSpeed * 0.78; // Léger ralenti aérien uniquement pendant une figure sur une bosse
+                currentSpeed += (airTargetSpeed - currentSpeed) * 0.14;
+            } else if (onGrassThisFrame) {
+                landingBoostTimer = 0;
+                player.boostImmune = false;
+                currentSpeed = Math.max(14, currentSpeed - 1.5); 
+            } else if (landingBoostTimer > 0) {
+                landingBoostTimer--;
+                if (landingBoostTimer <= 0) player.boostImmune = false;
+                let boostTarget = globalTargetSpeed + (player.boostPower || 5.5);
+                currentSpeed += (boostTarget - currentSpeed) * 0.18;
+            } else {
+                player.boostImmune = false;
+                if (currentSpeed > globalTargetSpeed) {
+                    currentSpeed = Math.max(globalTargetSpeed, currentSpeed - 0.15);
+                } else {
+                    currentSpeed = Math.min(globalTargetSpeed, currentSpeed + 0.55); 
+                }
+            }
+            updateEffects(onGrassThisFrame);
         }
 
-        // --- DESSIN DES ENTITÉS ---
+        // --- DESSIN D'UN SAPIN ENNEIGÉ DÉTAILLÉ ---
+        function drawSnowyPine(ctx, vw, vh) {
+            // Ombre douce au sol
+            ctx.fillStyle = "rgba(20, 45, 70, 0.22)";
+            ctx.beginPath(); ctx.ellipse(0, 0, vw*0.38, vw*0.12, 0, 0, Math.PI*2); ctx.fill();
+
+            // Tronc en bois
+            ctx.fillStyle = "#4e342e";
+            ctx.fillRect(-vw*0.08, -vh*0.22, vw*0.16, vh*0.22);
+
+            // 3 étages de branches de sapin avec couche de neige fraîche sur le dessus
+            const tiers = [
+                { yBot: -vh*0.16, yTop: -vh*0.58, w: vw*0.52 },
+                { yBot: -vh*0.44, yTop: -vh*0.82, w: vw*0.40 },
+                { yBot: -vh*0.68, yTop: -vh*1.04, w: vw*0.28 }
+            ];
+            tiers.forEach(t => {
+                // Feuillage vert sapin profond
+                ctx.fillStyle = "#1b4d2e";
+                ctx.beginPath();
+                ctx.moveTo(0, t.yTop);
+                ctx.lineTo(-t.w, t.yBot);
+                ctx.lineTo(t.w, t.yBot);
+                ctx.closePath();
+                ctx.fill();
+
+                // Côté éclairé du sapin
+                ctx.fillStyle = "#2d6a4f";
+                ctx.beginPath();
+                ctx.moveTo(0, t.yTop);
+                ctx.lineTo(0, t.yBot);
+                ctx.lineTo(t.w, t.yBot);
+                ctx.closePath();
+                ctx.fill();
+
+                // Épaisse couche de neige blanche sur les branches
+                ctx.fillStyle = "#f5f9ff";
+                ctx.beginPath();
+                ctx.moveTo(0, t.yTop);
+                ctx.lineTo(-t.w * 0.72, t.yTop + (t.yBot - t.yTop) * 0.65);
+                ctx.quadraticCurveTo(-t.w * 0.3, t.yTop + (t.yBot - t.yTop) * 0.45, 0, t.yTop + (t.yBot - t.yTop) * 0.62);
+                ctx.quadraticCurveTo(t.w * 0.35, t.yTop + (t.yBot - t.yTop) * 0.45, t.w * 0.72, t.yTop + (t.yBot - t.yTop) * 0.65);
+                ctx.closePath();
+                ctx.fill();
+            });
+        }
+
+        // --- DESSIN D'UN CHALET ALPIN EN BOIS SUR LE BORD DE PISTE ---
+        function drawAlpineChalet(ctx, vw, vh) {
+            // Ombre portée du chalet sur la neige
+            ctx.fillStyle = "rgba(20, 45, 70, 0.25)";
+            ctx.beginPath(); ctx.ellipse(0, 0, vw*0.52, vw*0.15, 0, 0, Math.PI*2); ctx.fill();
+
+            let bodyW = vw * 0.72;
+            let bodyH = vh * 0.56;
+
+            // Soubassement en pierre
+            ctx.fillStyle = "#636e72";
+            ctx.fillRect(-bodyW/2, -bodyH*0.22, bodyW, bodyH*0.22);
+
+            // Façade en rondins de bois chaud
+            let woodGrad = ctx.createLinearGradient(-bodyW/2, -bodyH, bodyW/2, 0);
+            woodGrad.addColorStop(0, "#a0522d");
+            woodGrad.addColorStop(1, "#6e351c");
+            ctx.fillStyle = woodGrad;
+            ctx.fillRect(-bodyW/2, -bodyH, bodyW, bodyH*0.78);
+
+            // Pignon sous le toit
+            ctx.beginPath();
+            ctx.moveTo(-bodyW/2, -bodyH);
+            ctx.lineTo(0, -vh * 0.92);
+            ctx.lineTo(bodyW/2, -bodyH);
+            ctx.closePath();
+            ctx.fill();
+
+            // Lignes horizontales des rondins de bois
+            ctx.strokeStyle = "rgba(60, 25, 10, 0.35)";
+            ctx.lineWidth = Math.max(1, vw * 0.008);
+            for (let y = -bodyH * 0.28; y > -bodyH; y -= bodyH * 0.14) {
+                ctx.beginPath(); ctx.moveTo(-bodyW/2, y); ctx.lineTo(bodyW/2, y); ctx.stroke();
+            }
+
+            // Cheminée en pierre avec petite fumée
+            ctx.fillStyle = "#576574";
+            ctx.fillRect(bodyW*0.18, -vh*0.88, bodyW*0.13, vh*0.25);
+            ctx.fillStyle = "#ffffff"; // Neige sur la cheminée
+            ctx.fillRect(bodyW*0.16, -vh*0.90, bodyW*0.17, vh*0.04);
+
+            // Fenêtres illuminées chaleureusement (jaune/orangé)
+            ctx.fillStyle = "#ffeaa7";
+            ctx.strokeStyle = "#4a2311";
+            ctx.lineWidth = Math.max(1, vw * 0.012);
+            // Deux fenêtres + porte en bois
+            ctx.fillRect(-bodyW*0.34, -bodyH*0.68, bodyW*0.20, bodyH*0.26);
+            ctx.strokeRect(-bodyW*0.34, -bodyH*0.68, bodyW*0.20, bodyH*0.26);
+            ctx.fillRect(bodyW*0.14, -bodyH*0.68, bodyW*0.20, bodyH*0.26);
+            ctx.strokeRect(bodyW*0.14, -bodyH*0.68, bodyW*0.20, bodyH*0.26);
+
+            // Balcon en bois sous le pignon
+            ctx.fillStyle = "#4a2311";
+            ctx.fillRect(-bodyW*0.38, -bodyH*0.95, bodyW*0.76, bodyH*0.08);
+
+            // Grand toit savoyard débordant couvert d'un épais manteau de neige blanche
+            ctx.strokeStyle = "#4a2311";
+            ctx.lineWidth = Math.max(2, vw * 0.03);
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(-vw*0.48, -bodyH*0.88);
+            ctx.lineTo(0, -vh * 0.96);
+            ctx.lineTo(vw*0.48, -bodyH*0.88);
+            ctx.stroke();
+
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = Math.max(3, vw * 0.055);
+            ctx.beginPath();
+            ctx.moveTo(-vw*0.49, -bodyH*0.92);
+            ctx.lineTo(0, -vh * 1.0);
+            ctx.lineTo(vw*0.49, -bodyH*0.92);
+            ctx.stroke();
+        }
+
+        // --- FONCTION POUR DESSINER UN JOLI SKI DÉTAILLÉ (AVEC FLAMMES PENDANT LES FIGURES ET SUR LES RAMPES !) ---
+        function drawDetailedSki(ctx, xOffset, vw, vh, turnAngle, withFlames = false) {
+            ctx.save();
+            ctx.translate(xOffset, -vh * 0.14); // Placé pile sous les pieds de la marmotte (à 86% du bas de l'image)
+            ctx.rotate(turnAngle); // Les skis pivotent dans le sens des virages et s'inclinent pendant les figures !
+
+            let skiW = vw * 0.11;
+            let skiFront = -vh * 0.28; // Spatule avant qui pointe vers la pente devant (Z croissant)
+            let skiBack = vh * 0.16;   // Talon arrière du ski vers la caméra
+
+            // FLAMMES ARDENTES SOUS ET AUTOUR DU SKI (pendant une figure aérienne ou un slide sur rampe !)
+            if (withFlames) {
+                let flicker1 = Math.sin(frames * 0.65 + xOffset) * skiW * 0.45;
+                let flicker2 = Math.cos(frames * 0.85 - xOffset) * skiW * 0.40;
+                let flameLen = (skiBack - skiFront) * (0.65 + 0.18 * Math.sin(frames * 0.7));
+
+                // 1. Halo et grande langue de feu rouge-orangé externe
+                let outerFire = ctx.createLinearGradient(0, skiFront, 0, skiBack + flameLen);
+                outerFire.addColorStop(0, "rgba(255, 69, 0, 0.85)");
+                outerFire.addColorStop(0.55, "rgba(255, 30, 0, 0.95)");
+                outerFire.addColorStop(1, "rgba(255, 0, 0, 0)");
+                ctx.fillStyle = outerFire;
+                ctx.beginPath();
+                ctx.moveTo(-skiW * 1.35, skiFront + 4);
+                ctx.quadraticCurveTo(-skiW * 1.9 + flicker1, (skiFront + skiBack) * 0.5, -skiW * 0.9 + flicker2, skiBack + flameLen * 0.75);
+                ctx.lineTo(0 + flicker1 * 0.6, skiBack + flameLen);
+                ctx.lineTo(skiW * 0.9 - flicker2, skiBack + flameLen * 0.75);
+                ctx.quadraticCurveTo(skiW * 1.9 + flicker2, (skiFront + skiBack) * 0.5, skiW * 1.35, skiFront + 4);
+                ctx.closePath();
+                ctx.fill();
+
+                // 2. Langues de feu orange vif et jaune d'or qui dansent le long des carres du ski
+                let midFire = ctx.createLinearGradient(0, skiFront, 0, skiBack + flameLen * 0.75);
+                midFire.addColorStop(0, "#ffea00");
+                midFire.addColorStop(0.5, "#ff7b00");
+                midFire.addColorStop(1, "rgba(255, 60, 0, 0)");
+                ctx.fillStyle = midFire;
+                ctx.beginPath();
+                ctx.moveTo(-skiW * 0.95, skiFront + 2);
+                for (let s = 0; s <= 4; s++) {
+                    let py = skiFront + (s / 4) * (skiBack - skiFront + flameLen * 0.5);
+                    let wave = Math.sin(frames * 0.9 + s * 1.7) * skiW * 0.55;
+                    ctx.lineTo(-skiW * 1.15 - Math.abs(wave), py);
+                }
+                ctx.lineTo(flicker2 * 0.5, skiBack + flameLen * 0.78);
+                for (let s = 4; s >= 0; s--) {
+                    let py = skiFront + (s / 4) * (skiBack - skiFront + flameLen * 0.5);
+                    let wave = Math.cos(frames * 0.9 + s * 1.5) * skiW * 0.55;
+                    ctx.lineTo(skiW * 1.15 + Math.abs(wave), py);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // 3. Cœur de flamme blanc-jaune incandescent au talon du ski
+                ctx.fillStyle = "rgba(255, 255, 210, 0.92)";
+                ctx.beginPath();
+                ctx.moveTo(-skiW * 0.55, skiBack * 0.4);
+                ctx.lineTo(flicker1 * 0.3, skiBack + flameLen * 0.42);
+                ctx.lineTo(skiW * 0.55, skiBack * 0.4);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Ombre portée du ski sur la neige
+            ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+            ctx.beginPath();
+            ctx.roundRect(-skiW/2 + 2, skiFront + 3, skiW, skiBack - skiFront, [skiW, skiW, 3, 3]);
+            ctx.fill();
+
+            // Planche principale du ski (Dégradé Rouge Racing)
+            let skiGrad = ctx.createLinearGradient(0, skiFront, 0, skiBack);
+            skiGrad.addColorStop(0, "#ff7675");
+            skiGrad.addColorStop(0.5, "#e74c3c");
+            skiGrad.addColorStop(1, "#b71c1c");
+            ctx.fillStyle = skiGrad;
+            ctx.strokeStyle = withFlames ? "#ffea00" : "#2c3e50"; // Carres chauffées à blanc si en flammes !
+            ctx.lineWidth = 1.5;
+
+            ctx.beginPath();
+            ctx.moveTo(-skiW/2, skiBack); // Talon arrière gauche
+            ctx.lineTo(skiW/2, skiBack);  // Talon arrière droit
+            ctx.lineTo(skiW/2, skiFront + skiW*1.1); // Côté droit
+            // Spatule avant arrondie (vers l'avant de la piste)
+            ctx.quadraticCurveTo(skiW/2, skiFront - skiW*0.3, 0, skiFront - skiW*0.5);
+            ctx.quadraticCurveTo(-skiW/2, skiFront - skiW*0.3, -skiW/2, skiFront + skiW*1.1);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Bande décorative blanche "Racing" au centre du ski
+            ctx.fillStyle = "#ecf0f1";
+            ctx.fillRect(-skiW * 0.18, skiFront + 6, skiW * 0.36, (skiBack - skiFront) * 0.82);
+
+            // Embout noir de spatule avant
+            ctx.fillStyle = "#2d3436";
+            ctx.beginPath();
+            ctx.arc(0, skiFront, skiW * 0.35, Math.PI, 0);
+            ctx.fill();
+
+            // Fixation / Chaussure sous la patte de la marmotte
+            ctx.fillStyle = "#2d3436";
+            ctx.fillRect(-skiW * 0.58, -vh * 0.05, skiW * 1.16, vh * 0.11);
+            ctx.fillStyle = "#f1c40f"; // Détail jaune sur la fixation
+            ctx.fillRect(-skiW * 0.35, -vh * 0.02, skiW * 0.7, vh * 0.04);
+
+            ctx.restore();
+        }
+
+        // --- DESSIN D'UN TRONC D'ARBRE COUCHÉ / RONDIN (OBSTACLE À SAUTER) ---
+        function drawFallenLog(ctx, vw, vh) {
+            // Ombre portée sous le tronc
+            ctx.fillStyle = "rgba(15, 30, 45, 0.28)";
+            ctx.beginPath();
+            ctx.ellipse(0, vh*0.05, vw*0.52, vh*0.24, 0, 0, Math.PI*2);
+            ctx.fill();
+
+            let r = vh * 0.44; // Rayon du cylindre du tronc
+            let cy = -r;       // Centre Y du tronc posé sur la neige
+            let halfW = vw * 0.46;
+
+            // Corps cylindrique du tronc en écorce brune
+            let barkGrad = ctx.createLinearGradient(0, cy - r, 0, cy + r);
+            barkGrad.addColorStop(0, "#795548");
+            barkGrad.addColorStop(0.55, "#4e342e");
+            barkGrad.addColorStop(1, "#271815");
+            ctx.fillStyle = barkGrad;
+
+            ctx.beginPath();
+            ctx.moveTo(-halfW, cy - r);
+            ctx.lineTo(halfW, cy - r);
+            ctx.ellipse(halfW, cy, r * 0.42, r, 0, -Math.PI/2, Math.PI/2);
+            ctx.lineTo(-halfW, cy + r);
+            ctx.ellipse(-halfW, cy, r * 0.42, r, 0, Math.PI/2, -Math.PI/2);
+            ctx.closePath();
+            ctx.fill();
+
+            // Rainures de l'écorce du tronc
+            ctx.strokeStyle = "rgba(30, 15, 10, 0.55)";
+            ctx.lineWidth = Math.max(1, vh * 0.04);
+            for (let i = -2; i <= 2; i++) {
+                let ly = cy + i * (r * 0.34);
+                ctx.beginPath();
+                ctx.moveTo(-halfW * 0.85, ly);
+                ctx.lineTo(halfW * 0.85, ly);
+                ctx.stroke();
+            }
+
+            // Coupe du bois claire sur l'extrémité gauche (anneaux du tronc)
+            ctx.fillStyle = "#d7ccc8";
+            ctx.strokeStyle = "#3e2723";
+            ctx.lineWidth = Math.max(1.5, vh * 0.05);
+            ctx.beginPath();
+            ctx.ellipse(-halfW, cy, r * 0.42, r, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Cernes du bois à l'intérieur de la coupe
+            ctx.strokeStyle = "#8d6e63";
+            ctx.lineWidth = Math.max(1, vh * 0.03);
+            ctx.beginPath();
+            ctx.ellipse(-halfW, cy, r * 0.22, r * 0.52, 0, 0, Math.PI*2);
+            ctx.stroke();
+
+            // Petite branche cassée sur le dessus
+            ctx.fillStyle = "#4e342e";
+            ctx.beginPath();
+            ctx.moveTo(halfW * 0.2, cy - r * 0.8);
+            ctx.lineTo(halfW * 0.32, cy - r * 1.45);
+            ctx.lineTo(halfW * 0.40, cy - r * 0.8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Bande de neige fraîche posée sur le dessus du tronc couché
+            ctx.fillStyle = "#f5f9ff";
+            ctx.beginPath();
+            ctx.moveTo(-halfW * 0.92, cy - r * 0.85);
+            ctx.quadraticCurveTo(-halfW * 0.3, cy - r * 1.15, 0, cy - r * 0.92);
+            ctx.quadraticCurveTo(halfW * 0.4, cy - r * 1.15, halfW * 0.92, cy - r * 0.85);
+            ctx.quadraticCurveTo(0, cy - r * 0.45, -halfW * 0.92, cy - r * 0.85);
+            ctx.fill();
+        }
+
+        // --- DESSIN D'UNE BOSSE DE NEIGE 3D NATURELLE (OU GROSSE BOSSE RARE AVEC ITEM DELTAPLANE !) ---
+        function drawMogul3D(ctx, item) {
+            let isMega = (item.type === "megaMogul");
+            let halfLen = (item.lengthZ || (isMega ? 680 : 520)) / 2;
+            let zNear = Math.max(15, item.z - halfLen);              // Entrée basse au ras de la neige (h = 0)
+            let zMid1 = Math.max(15, item.z - halfLen * 0.25);       // Début de la courbe de neige
+            let zMid2 = Math.max(15, item.z + halfLen * 0.35);       // Creux montant de la bosse
+            let zFar  = item.z + halfLen;                            // Lèvre d'éjection haute de la bosse !
+
+            let pNear = project(item.x, 0, zNear);
+            let pMid1 = project(item.x, 0, zMid1);
+            let pMid2 = project(item.x, 0, zMid2);
+            let pFar  = project(item.x, 0, zFar);
+
+            // Demi-largeurs projetées en 3D
+            let wNear = item.width * 0.42 * pNear.scale;
+            let wMid1 = item.width * 0.42 * pMid1.scale;
+            let wMid2 = item.width * 0.42 * pMid2.scale;
+            let wFar  = item.width * 0.42 * pFar.scale;
+
+            // Hauteur incurvée : part de 0 à l'entrée et remonte en courbe jusqu'à hFar !
+            let hNear = 0;
+            let hMid1 = item.height * 0.18 * pMid1.scale;
+            let hMid2 = item.height * 0.54 * pMid2.scale;
+            let hFar  = item.height * 1.05 * pFar.scale;
+
+            ctx.save();
+
+            // 1. Ombre douce portée dans la neige sous la bosse
+            ctx.fillStyle = "rgba(130, 170, 210, 0.24)";
+            ctx.beginPath();
+            ctx.moveTo(pNear.x - wNear * 1.12, pNear.y + 2);
+            ctx.lineTo(pFar.x - wFar * 1.15, pFar.y + 3);
+            ctx.lineTo(pFar.x + wFar * 1.15, pFar.y + 3);
+            ctx.lineTo(pNear.x + wNear * 1.12, pNear.y + 2);
+            ctx.closePath();
+            ctx.fill();
+
+            // 2. Mur arrière en neige ombragée sous la lèvre de la bosse (en zFar)
+            ctx.fillStyle = "#c8ddf0";
+            ctx.beginPath();
+            ctx.moveTo(pFar.x - wFar, pFar.y);
+            ctx.lineTo(pFar.x - wFar, pFar.y - hFar);
+            ctx.lineTo(pFar.x + wFar, pFar.y - hFar);
+            ctx.lineTo(pFar.x + wFar, pFar.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // 3. Flanc latéral GAUCHE en neige sculptée naturelle
+            ctx.fillStyle = "#d8e9f7";
+            ctx.beginPath();
+            ctx.moveTo(pNear.x - wNear, pNear.y);
+            ctx.lineTo(pMid1.x - wMid1, pMid1.y - hMid1);
+            ctx.lineTo(pMid2.x - wMid2, pMid2.y - hMid2);
+            ctx.lineTo(pFar.x - wFar, pFar.y - hFar);
+            ctx.lineTo(pFar.x - wFar, pFar.y);
+            ctx.lineTo(pMid2.x - wMid2, pMid2.y);
+            ctx.lineTo(pMid1.x - wMid1, pMid1.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // 4. Flanc latéral DROIT en neige éclairée
+            ctx.fillStyle = "#e6f2fc";
+            ctx.beginPath();
+            ctx.moveTo(pNear.x + wNear, pNear.y);
+            ctx.lineTo(pMid1.x + wMid1, pMid1.y - hMid1);
+            ctx.lineTo(pMid2.x + wMid2, pMid2.y - hMid2);
+            ctx.lineTo(pFar.x + wFar, pFar.y - hFar);
+            ctx.lineTo(pFar.x + wFar, pFar.y);
+            ctx.lineTo(pMid2.x + wMid2, pMid2.y);
+            ctx.lineTo(pMid1.x + wMid1, pMid1.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // 5. Surface courbée de la bosse en neige naturelle (dégradé bleu très doux et discret, sans flèches !)
+            let kickerGrad = ctx.createLinearGradient(pNear.x, pNear.y, pFar.x, pFar.y - hFar);
+            kickerGrad.addColorStop(0, "#ffffff");   // Entrée fondue dans la neige blanche
+            kickerGrad.addColorStop(0.45, "#f5faff"); // Neige très claire au cœur de la courbe
+            kickerGrad.addColorStop(0.85, "#e1effa"); // Léger reflet bleuté de neige damée
+            kickerGrad.addColorStop(1, "#ffffff");    // Crête blanche de neige fraîche au sommet !
+            ctx.fillStyle = kickerGrad;
+
+            ctx.beginPath();
+            ctx.moveTo(pNear.x - wNear, pNear.y - hNear);
+            ctx.lineTo(pMid1.x - wMid1, pMid1.y - hMid1);
+            ctx.lineTo(pMid2.x - wMid2, pMid2.y - hMid2);
+            ctx.lineTo(pFar.x - wFar, pFar.y - hFar);
+            ctx.lineTo(pFar.x + wFar, pFar.y - hFar);
+            ctx.lineTo(pMid2.x + wMid2, pMid2.y - hMid2);
+            ctx.lineTo(pMid1.x + wMid1, pMid1.y - hMid1);
+            ctx.lineTo(pNear.x + wNear, pNear.y - hNear);
+            ctx.closePath();
+            ctx.fill();
+
+            // 6. Discret contour de relief neigeux sur les arêtes et la lèvre supérieure
+            ctx.strokeStyle = "rgba(175, 205, 235, 0.65)";
+            ctx.lineWidth = Math.max(1.2, 3.5 * pMid1.scale);
+            ctx.beginPath();
+            ctx.moveTo(pNear.x - wNear, pNear.y - hNear);
+            ctx.lineTo(pMid1.x - wMid1, pMid1.y - hMid1);
+            ctx.lineTo(pMid2.x - wMid2, pMid2.y - hMid2);
+            ctx.lineTo(pFar.x - wFar, pFar.y - hFar);
+            ctx.lineTo(pFar.x + wFar, pFar.y - hFar);
+            ctx.lineTo(pMid2.x + wMid2, pMid2.y - hMid2);
+            ctx.lineTo(pMid1.x + wMid1, pMid1.y - hMid1);
+            ctx.lineTo(pNear.x + wNear, pNear.y - hNear);
+            ctx.stroke();
+
+            // 7. Si c'est une GROSSE BOSSE RARE (megaMogul) et que l'item n'a pas encore été pris :
+            // on dessine l'ITEM DELTAPLANE flottant HAUT EN L'AIR BIEN PLUS LOIN APRÈS LA BOSSE (accessible uniquement en maintenant la figure ⬆️) !
+            if (isMega && !item.gliderTaken) {
+                let gliderZ = item.z + halfLen + 620; // Éloigné à 620 unités après la sortie de la super bosse !
+                let bobY = -265 + Math.sin(frames * 0.1) * 14;
+                let pGlider = project(item.x, bobY, gliderZ);
+                let gScale = pGlider.scale;
+                let gw = 130 * gScale; // Taille du deltaplane flottant réduite !
+                let gh = 56 * gScale;
+
+                ctx.save();
+                ctx.translate(pGlider.x, pGlider.y);
+
+                // Halo lumineux ardent autour de l'item Deltaplane à attraper en figure
+                let haloGrad = ctx.createRadialGradient(0, 0, gw * 0.08, 0, 0, gw * 0.72);
+                haloGrad.addColorStop(0, "rgba(255, 220, 100, 0.9)");
+                haloGrad.addColorStop(0.5, "rgba(255, 90, 0, 0.45)");
+                haloGrad.addColorStop(1, "rgba(255, 50, 0, 0)");
+                ctx.fillStyle = haloGrad;
+                ctx.beginPath();
+                ctx.arc(0, 0, gw * 0.72, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Dessin de l'icône de Deltaplane flottant (fond sombre + motifs de FLAMMES !)
+                ctx.fillStyle = "#1e1e26";
+                ctx.strokeStyle = "#ff4500";
+                ctx.lineWidth = Math.max(1.2, 2.2 * gScale);
+                ctx.beginPath();
+                ctx.moveTo(0, -gh * 0.55);         // Nez avant du deltaplane
+                ctx.lineTo(-gw * 0.55, gh * 0.25); // Aile gauche
+                ctx.lineTo(0, gh * 0.05);          // Creux central arrière
+                ctx.lineTo(gw * 0.55, gh * 0.25);  // Aile droite
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Motifs de flammes oranges et jaunes sur les ailes de l'item deltaplane
+                ctx.fillStyle = "#ff6b00";
+                ctx.beginPath();
+                ctx.moveTo(0, -gh * 0.55);
+                ctx.lineTo(-gw * 0.44, gh * 0.16);
+                ctx.lineTo(-gw * 0.24, -gh * 0.02);
+                ctx.lineTo(-gw * 0.15, gh * 0.14);
+                ctx.lineTo(0, -gh * 0.08);
+                ctx.lineTo(gw * 0.15, gh * 0.14);
+                ctx.lineTo(gw * 0.24, -gh * 0.02);
+                ctx.lineTo(gw * 0.44, gh * 0.16);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = "#ffd700";
+                ctx.beginPath();
+                ctx.moveTo(0, -gh * 0.55);
+                ctx.lineTo(-gw * 0.26, gh * 0.08);
+                ctx.lineTo(-gw * 0.10, -gh * 0.12);
+                ctx.lineTo(0, gh * 0.05);
+                ctx.lineTo(gw * 0.10, -gh * 0.12);
+                ctx.lineTo(gw * 0.26, gh * 0.08);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+
+        // --- DESSIN DU DELTAPLANE ÉQUIPÉ SUR LA MARMOTTE PENDANT LE VOL DE 10 SECONDES (TAILLE RÉDUITE + FILETS D'AIR) ---
+        function drawAttachedHangGlider(ctx, vw, vh) {
+            ctx.save();
+            ctx.translate(0, -vh * 0.72); // Placé juste au-dessus de la marmotte qui se tient au trapèze !
+
+            // Taille du deltaplane réduite pour rester élégant et bien dégager la vue !
+            let wingW = vw * 1.04;
+            let wingH = vh * 0.44;
+
+            // 0. Filets d'air / rubans de vent animés qui s'échappent du bord d'attaque et du bout des ailes !
+            ctx.strokeStyle = "rgba(220, 248, 255, 0.78)";
+            ctx.lineCap = "round";
+            [-1, 1].forEach(side => {
+                // Ruban de vent en bout d'aile
+                ctx.lineWidth = 2.2;
+                ctx.beginPath();
+                let startX = side * wingW * 0.96;
+                let startY = wingH * 0.20;
+                ctx.moveTo(startX, startY);
+                let wave1 = Math.sin(frames * 0.45 + side) * (vw * 0.08);
+                let wave2 = Math.cos(frames * 0.45 + side * 2) * (vw * 0.12);
+                ctx.quadraticCurveTo(startX + wave1, startY + wingH * 0.55, startX + wave2, startY + wingH * 1.15);
+                ctx.stroke();
+
+                // Courant d'air rapide passant sur l'aile
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+                ctx.beginPath();
+                let midX = side * wingW * 0.52;
+                let shiftY = (frames * 4) % (wingH * 0.9);
+                ctx.moveTo(midX, -wingH * 0.35 + shiftY * 0.4);
+                ctx.lineTo(midX + side * vw * 0.04, wingH * 0.15 + shiftY * 0.6);
+                ctx.stroke();
+            });
+
+            // 1. Trapèze métallique (barre de contrôle tenue par les pattes de la marmotte)
+            ctx.strokeStyle = "#dfe6e9";
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.moveTo(0, -wingH * 0.15);
+            ctx.lineTo(-vw * 0.18, vh * 0.30);
+            ctx.lineTo(vw * 0.18, vh * 0.30);
+            ctx.closePath();
+            ctx.stroke();
+
+            // 2. Grande voile delta aérodynamique (fond sombre Racing + MOTIFS DE FLAMMES !)
+            let sailGrad = ctx.createLinearGradient(0, -wingH * 0.85, 0, wingH * 0.25);
+            sailGrad.addColorStop(0, "#2d1115");
+            sailGrad.addColorStop(0.55, "#1a1a24");
+            sailGrad.addColorStop(1, "#0f0f15");
+            ctx.fillStyle = sailGrad;
+            ctx.strokeStyle = "#ff3b00";
+            ctx.lineWidth = 2.0;
+
+            ctx.beginPath();
+            ctx.moveTo(0, -wingH * 0.85);                       // Pointe avant du deltaplane
+            ctx.lineTo(-wingW, wingH * 0.22);                   // Extrémité aile gauche
+            ctx.quadraticCurveTo(-wingW * 0.45, -wingH * 0.05, 0, wingH * 0.08); // Bord de fuite gauche
+            ctx.quadraticCurveTo(wingW * 0.45, -wingH * 0.05, wingW, wingH * 0.22); // Bord de fuite droit
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // 3. MOTIFS DE FLAMMES ARDENTES (Rouge-Orangé + Jaune d'Or) peints sur toute l'envergure des ailes !
+            let flameGrad = ctx.createLinearGradient(0, -wingH * 0.85, 0, wingH * 0.22);
+            flameGrad.addColorStop(0, "#ffea00");
+            flameGrad.addColorStop(0.45, "#ff6b00");
+            flameGrad.addColorStop(1, "#e71c23");
+            ctx.fillStyle = flameGrad;
+
+            ctx.beginPath();
+            ctx.moveTo(0, -wingH * 0.85); // Part du nez avant
+            // Bord d'attaque gauche jusqu'au bout d'aile
+            ctx.lineTo(-wingW * 0.88, wingH * 0.10);
+            // Langues de flammes découpées sur l'aile gauche (remontant et redescendant)
+            ctx.quadraticCurveTo(-wingW * 0.68, -wingH * 0.12, -wingW * 0.62, wingH * 0.06);
+            ctx.quadraticCurveTo(-wingW * 0.50, -wingH * 0.28, -wingW * 0.40, wingH * 0.04);
+            ctx.quadraticCurveTo(-wingW * 0.26, -wingH * 0.34, -wingW * 0.16, wingH * 0.05);
+            ctx.quadraticCurveTo(-wingW * 0.06, -wingH * 0.25, 0, wingH * 0.06);
+            // Langues de flammes symétriques sur l'aile droite
+            ctx.quadraticCurveTo(wingW * 0.06, -wingH * 0.25, wingW * 0.16, wingH * 0.05);
+            ctx.quadraticCurveTo(wingW * 0.26, -wingH * 0.34, wingW * 0.40, wingH * 0.04);
+            ctx.quadraticCurveTo(wingW * 0.50, -wingH * 0.28, wingW * 0.62, wingH * 0.06);
+            ctx.quadraticCurveTo(wingW * 0.68, -wingH * 0.12, wingW * 0.88, wingH * 0.10);
+            ctx.closePath();
+            ctx.fill();
+
+            // 4. Cœur de flammes jaune-or vif au centre et le long du bord d'attaque
+            ctx.fillStyle = "#ffe600";
+            ctx.beginPath();
+            ctx.moveTo(0, -wingH * 0.85);
+            ctx.lineTo(-wingW * 0.56, -wingH * 0.18);
+            ctx.quadraticCurveTo(-wingW * 0.40, -wingH * 0.32, -wingW * 0.34, -wingH * 0.06);
+            ctx.quadraticCurveTo(-wingW * 0.20, -wingH * 0.42, -wingW * 0.12, -wingH * 0.05);
+            ctx.quadraticCurveTo(0, -wingH * 0.35, 0, -wingH * 0.02);
+            ctx.quadraticCurveTo(0, -wingH * 0.35, wingW * 0.12, -wingH * 0.05);
+            ctx.quadraticCurveTo(wingW * 0.20, -wingH * 0.42, wingW * 0.34, -wingH * 0.06);
+            ctx.quadraticCurveTo(wingW * 0.40, -wingH * 0.32, wingW * 0.56, -wingH * 0.18);
+            ctx.closePath();
+            ctx.fill();
+
+            // Quille centrale métallique
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(0, -wingH * 0.85);
+            ctx.lineTo(0, wingH * 0.08);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // --- DESSIN D'UNE RAMPE / RAIL DE SNOWPARK ORIENTÉE DANS LE SENS DE LA PISTE (AXE Z) ---
+        function drawRamp3D(ctx, item) {
+            let halfLen = (item.lengthZ || 720) / 2;
+            let zFar = item.z + halfLen;                   // Extrémité haute/lointaine de la rampe (dans la pente)
+            let zMid = item.z;                             // Milieu de la rampe
+            let zNear = Math.max(15, item.z - halfLen);    // Extrémité basse/proche de la rampe
+
+            let pFar = project(item.x, 0, zFar);
+            let pMid = project(item.x, 0, zMid);
+            let pNear = project(item.x, 0, zNear);
+
+            // Largeur graphique affinée (0.19 au lieu de 0.28) sans réduire la zone de contact !
+            let wFar = item.width * 0.19 * pFar.scale;
+            let wMid = item.width * 0.19 * pMid.scale;
+            let wNear = item.width * 0.19 * pNear.scale;
+
+            let hFar = item.height * pFar.scale;
+            let hMid = item.height * pMid.scale;
+            let hNear = item.height * pNear.scale;
+
+            ctx.save();
+            // 1. Ombre portée longitudinale sur la neige sous toute la rampe
+            ctx.fillStyle = "rgba(20, 45, 70, 0.26)";
+            ctx.beginPath();
+            ctx.moveTo(pNear.x - wNear * 1.25, pNear.y + 4);
+            ctx.lineTo(pFar.x - wFar * 1.25, pFar.y + 2);
+            ctx.lineTo(pFar.x + wFar * 1.25, pFar.y + 2);
+            ctx.lineTo(pNear.x + wNear * 1.25, pNear.y + 4);
+            ctx.closePath();
+            ctx.fill();
+
+            // 2. Poteaux métalliques de soutien ancrés dans la neige (arrière, milieu, avant)
+            ctx.strokeStyle = "#2c3e50";
+            [
+                { p: pFar, h: hFar, s: pFar.scale },
+                { p: pMid, h: hMid, s: pMid.scale },
+                { p: pNear, h: hNear, s: pNear.scale }
+            ].forEach(post => {
+                ctx.lineWidth = Math.max(2, 16 * post.s);
+                ctx.beginPath();
+                ctx.moveTo(post.p.x, post.p.y);
+                ctx.lineTo(post.p.x, post.p.y - post.h * 0.85);
+                ctx.stroke();
+            });
+
+            // 3. Flancs latéraux orange vif "Snowpark" le long de la rampe
+            ctx.fillStyle = "#d35400";
+            ctx.beginPath();
+            ctx.moveTo(pNear.x - wNear, pNear.y - hNear);
+            ctx.lineTo(pMid.x - wMid, pMid.y - hMid);
+            ctx.lineTo(pFar.x - wFar, pFar.y - hFar);
+            ctx.lineTo(pFar.x - wFar, pFar.y - hFar * 0.55);
+            ctx.lineTo(pMid.x - wMid, pMid.y - hMid * 0.55);
+            ctx.lineTo(pNear.x - wNear, pNear.y - hNear * 0.55);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = "#e67e22";
+            ctx.beginPath();
+            ctx.moveTo(pNear.x + wNear, pNear.y - hNear);
+            ctx.lineTo(pMid.x + wMid, pMid.y - hMid);
+            ctx.lineTo(pFar.x + wFar, pFar.y - hFar);
+            ctx.lineTo(pFar.x + wFar, pFar.y - hFar * 0.55);
+            ctx.lineTo(pMid.x + wMid, pMid.y - hMid * 0.55);
+            ctx.lineTo(pNear.x + wNear, pNear.y - hNear * 0.55);
+            ctx.closePath();
+            ctx.fill();
+
+            // Face avant du caisson de la rampe
+            ctx.fillStyle = "#a04000";
+            ctx.beginPath();
+            ctx.moveTo(pNear.x - wNear, pNear.y - hNear);
+            ctx.lineTo(pNear.x + wNear, pNear.y - hNear);
+            ctx.lineTo(pNear.x + wNear, pNear.y - hNear * 0.52);
+            ctx.lineTo(pNear.x - wNear, pNear.y - hNear * 0.52);
+            ctx.closePath();
+            ctx.fill();
+
+            // 4. Plateau supérieur de glisse (dans le sens de la piste !)
+            let deckGrad = ctx.createLinearGradient(pNear.x, pNear.y - hNear, pFar.x, pFar.y - hFar);
+            deckGrad.addColorStop(0, "#ffffff");
+            deckGrad.addColorStop(0.5, "#dfe6e9");
+            deckGrad.addColorStop(1, "#b2bec3");
+            ctx.fillStyle = deckGrad;
+            ctx.strokeStyle = "#f39c12"; // Bordures jaunes/oranges de snowpark
+            ctx.lineWidth = Math.max(1.5, 5 * pMid.scale);
+
+            ctx.beginPath();
+            ctx.moveTo(pNear.x - wNear, pNear.y - hNear);
+            ctx.lineTo(pMid.x - wMid, pMid.y - hMid);
+            ctx.lineTo(pFar.x - wFar, pFar.y - hFar);
+            ctx.lineTo(pFar.x + wFar, pFar.y - hFar);
+            ctx.lineTo(pMid.x + wMid, pMid.y - hMid);
+            ctx.lineTo(pNear.x + wNear, pNear.y - hNear);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Bande métallique centrale de slide sur le dessus de la rampe
+            ctx.strokeStyle = "#2980b9";
+            ctx.lineWidth = Math.max(1.5, 8 * pMid.scale);
+            ctx.beginPath();
+            ctx.moveTo(pNear.x, pNear.y - hNear);
+            ctx.lineTo(pMid.x, pMid.y - hMid);
+            ctx.lineTo(pFar.x, pFar.y - hFar);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // --- DESSIN ENTITÉS ---
         function drawEntities() {
             let renderList = [];
-            obstacles.forEach(obs => renderList.push({ ...obs, isObstacle: true }));
-            renderList.push({ x: player.x, y: player.y, z: player.z, width: 90, height: 90, isPlayer: true });
 
-            eagle.x = player.x + Math.sin(frames*0.02)*150; 
-            eagle.z = player.z + 300 - (eagleDanger * 2.5); 
-            eagle.y = -300 + (eagleDanger * 2.5); 
-            renderList.push({ x: eagle.x, y: eagle.y, z: eagle.z, width: 250, height: 120, isEagle: true });
+            sideScenery.forEach(sc => { renderList.push(sc); });
+            obstacles.forEach(obs => { renderList.push({ ...obs, isObstacle: true }); });
+            
+            // Marmotte placée en plein dans le mur de la pente
+            renderList.push({ x: player.x, y: player.y, z: player.z, width: 270, height: 270, isPlayer: true });
 
-            renderList.sort((a, b) => b.z - a.z); 
+            // Aigle : haut dans le ciel au départ (0 touche), plonge juste au-dessus de la marmotte à la 1ère erreur, et fonce sur elle à la moindre chute/obstacle !
+            if (state === 'EAGLE_ATTACK' || state === 'GAMEOVER') {
+                eagle.targetY = player.y - 22;
+                eagle.targetZ = player.z - 10;
+                eagle.y += (eagle.targetY - eagle.y) * 0.24;
+                eagle.z += (eagle.targetZ - eagle.z) * 0.24;
+                eagle.x += (player.x - eagle.x) * 0.24;
+            } else if (grassTouches === 0) {
+                eagle.targetY = -595;
+                eagle.targetZ = 310;
+                eagle.y += (eagle.targetY - eagle.y) * 0.08;
+                eagle.z += (eagle.targetZ - eagle.z) * 0.08;
+                eagle.x = player.x + Math.sin(frames * 0.05) * 190;
+            } else if (grassTouches === 1) {
+                eagle.targetY = -225; // Beaucoup plus bas et menaçant juste au-dessus de la marmotte !
+                eagle.targetZ = 495;
+                eagle.y += (eagle.targetY - eagle.y) * 0.08;
+                eagle.z += (eagle.targetZ - eagle.z) * 0.08;
+                eagle.x = player.x + Math.sin(frames * 0.05) * 75;
+            } else {
+                eagle.targetY = -85;
+                eagle.targetZ = 575;
+                eagle.y += (eagle.targetY - eagle.y) * 0.14;
+                eagle.z += (eagle.targetZ - eagle.z) * 0.14;
+                eagle.x = player.x;
+            }
+            renderList.push({ x: eagle.x, y: eagle.y, z: eagle.z, width: 540, height: 198, isEagle: true });
+
+            // Tri Profondeur Parfait (si la marmotte est sur une rampe/bosse ou saute par-dessus un sapin avec une bosse, elle passe au-dessus !)
+            renderList.sort((a, b) => {
+                let zA = a.z;
+                let zB = b.z;
+                let aIsModule = (a.type === "ramp" || a.type === "mogul" || a.type === "megaMogul");
+                let bIsModule = (b.type === "ramp" || b.type === "mogul" || b.type === "megaMogul");
+                if (aIsModule && b.isPlayer && Math.abs(a.z - b.z) < 480) return -1;
+                if (bIsModule && a.isPlayer && Math.abs(a.z - b.z) < 480) return 1;
+                // Quand la marmotte saute par-dessus un sapin grâce à une bosse, on l'affiche par-dessus la cime du sapin !
+                if (a.type === "tree" && b.isPlayer && player.onMogulJump && !player.grounded && Math.abs(a.z - b.z) < 220) return -1;
+                if (b.type === "tree" && a.isPlayer && player.onMogulJump && !player.grounded && Math.abs(a.z - b.z) < 220) return 1;
+                // Pendant l'attaque finale de l'aigle, l'aigle est dessiné juste devant la marmotte !
+                if (state === 'EAGLE_ATTACK' || state === 'GAMEOVER') {
+                    if (a.isPlayer && b.isEagle) return -1;
+                    if (b.isPlayer && a.isEagle) return 1;
+                }
+                return zB - zA;
+            }); 
 
             renderList.forEach(item => {
-                if (item.z <= 0) return;
+                if (item.z <= 0 && item.type !== "ramp" && item.type !== "mogul" && item.type !== "megaMogul") return;
+                if (item.type === "ramp") {
+                    drawRamp3D(ctx, item);
+                    return;
+                }
+                if (item.type === "mogul" || item.type === "megaMogul") {
+                    drawMogul3D(ctx, item);
+                    return;
+                }
+
                 let p = project(item.x, item.y, item.z);
                 let vw = item.width * p.scale; let vh = item.height * p.scale;
 
                 ctx.save();
                 ctx.translate(p.x, p.y);
 
+                if (item.isScenery) {
+                    if (item.type === "snowTree") drawSnowyPine(ctx, vw, vh);
+                    else if (item.type === "chalet") drawAlpineChalet(ctx, vw, vh);
+                }
+
                 if (item.isObstacle) {
                     if (item.type === "tree") {
-                        ctx.fillStyle = "#5d4037"; ctx.fillRect(-vw*0.1, -vh, vw*0.2, vh);
-                        ctx.fillStyle = "#064e3b"; ctx.beginPath(); ctx.moveTo(0,-vh); ctx.lineTo(-vw/2,-vh*0.2); ctx.lineTo(vw/2,-vh*0.2); ctx.fill(); 
+                        drawSnowyPine(ctx, vw, vh);
+                    } else if (item.type === "log") {
+                        drawFallenLog(ctx, vw, vh);
                     } else if (item.type === "rock") {
-                        ctx.fillStyle = "#7f8c8d"; ctx.beginPath(); ctx.moveTo(-vw/2,0); ctx.lineTo(-vw/4,-vh); ctx.lineTo(vw/4,-vh); ctx.lineTo(vw/2,0); ctx.fill();
+                        ctx.fillStyle = "rgba(0,0,0,0.22)";
+                        ctx.beginPath(); ctx.ellipse(0, 0, vw*0.45, vw*0.14, 0, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = "#607d8b"; ctx.beginPath();
+                        if (item.shape === 0) { ctx.moveTo(-vw/2,0); ctx.lineTo(-vw/3,-vh); ctx.lineTo(vw/3,-vh); ctx.lineTo(vw/2,0); }
+                        else if (item.shape === 1) { ctx.moveTo(-vw/2,0); ctx.lineTo(-vw/4,-vh*0.7); ctx.lineTo(0,-vh); ctx.lineTo(vw/3,-vh*0.6); ctx.lineTo(vw/2,0); }
+                        else { ctx.moveTo(-vw/2,0); ctx.lineTo(0,-vh); ctx.lineTo(vw/2,0); }
+                        ctx.fill();
                     } else if (item.type === "grass") {
-                        ctx.fillStyle = "#556b2f"; ctx.beginPath(); ctx.ellipse(0, 0, vw/2, vh*2, 0, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = "#4caf50"; ctx.beginPath();
+                        if (item.shape === 0) { ctx.ellipse(0, 0, vw/2, vh*2, 0, 0, Math.PI*2); } 
+                        else if (item.shape === 1) { ctx.ellipse(-vw/4, 0, vw/3, vh*1.5, 0.1, 0, Math.PI*2); ctx.ellipse(vw/4, 0, vw/3, vh*1.5, -0.1, 0, Math.PI*2); } 
+                        else { ctx.moveTo(-vw/2, 0); ctx.quadraticCurveTo(0, -vh*3, vw/2, 0); ctx.quadraticCurveTo(0, vh*3, -vw/2, 0); }
+                        ctx.fill();
+                        ctx.fillStyle = "#2e7d32"; for(let i=-8; i<=8; i++) { ctx.fillRect(i*(vw/16), -vh, vw*0.01, vh*1.5); }
+                    } else if (item.type === "animalCard" || item.type === "skyAnimalCard") {
+                        // Dessin de l'item "Carte Animal" (🐾) inspiré du dos de carte Animal du site principal !
+                        let bob = Math.sin(frames * 0.1 + item.z * 0.01) * (vh * 0.12);
+                        ctx.save();
+                        ctx.translate(0, -vh * 0.55 + bob);
+                        // Halo doré lumineux
+                        let halo = ctx.createRadialGradient(0, 0, vw * 0.1, 0, 0, vw * 0.85);
+                        halo.addColorStop(0, "rgba(255, 235, 59, 0.85)");
+                        halo.addColorStop(0.55, "rgba(229, 57, 53, 0.45)");
+                        halo.addColorStop(1, "rgba(229, 57, 53, 0)");
+                        ctx.fillStyle = halo;
+                        ctx.beginPath(); ctx.arc(0, 0, vw * 0.85, 0, Math.PI * 2); ctx.fill();
+
+                        // Carte rouge & or (style Carte Animal de l'inventaire)
+                        let cw = vw * 0.68;
+                        let ch = vh * 0.78;
+                        let cardGrad = ctx.createLinearGradient(-cw/2, -ch/2, cw/2, ch/2);
+                        cardGrad.addColorStop(0, "#e53935");
+                        cardGrad.addColorStop(1, "#b71c1c");
+                        ctx.fillStyle = cardGrad;
+                        ctx.strokeStyle = "#ffd700";
+                        ctx.lineWidth = Math.max(1.5, 3.5 * p.scale);
+                        ctx.beginPath();
+                        ctx.roundRect(-cw/2, -ch/2, cw, ch, Math.max(3, 10 * p.scale));
+                        ctx.fill();
+                        ctx.stroke();
+
+                        // Empreinte 🐾 au centre de la carte
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `bold ${Math.max(10, Math.round(cw * 0.55))}px 'Segoe UI Emoji', sans-serif`;
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("🐾", 0, 0);
+                        ctx.restore();
+                    } else if (item.type === "skyCloud") {
+                        // Dessin d'un petit nuage d'altitude dense à éviter en deltaplane !
+                        let drift = Math.sin(frames * 0.06 + item.x * 0.01) * (vw * 0.04);
+                        ctx.save();
+                        ctx.translate(drift, -vh * 0.35);
+                        // Ombre interne du nuage
+                        ctx.fillStyle = "rgba(120, 144, 156, 0.85)";
+                        ctx.beginPath();
+                        ctx.arc(-vw * 0.22, vh * 0.08, vw * 0.24, 0, Math.PI * 2);
+                        ctx.arc(vw * 0.22, vh * 0.08, vw * 0.23, 0, Math.PI * 2);
+                        ctx.arc(0, vh * 0.10, vw * 0.28, 0, Math.PI * 2);
+                        ctx.fill();
+                        // Corps duveteux blanc/bleuté du petit nuage
+                        let cloudGrad = ctx.createLinearGradient(0, -vh * 0.45, 0, vh * 0.25);
+                        cloudGrad.addColorStop(0, "#ffffff");
+                        cloudGrad.addColorStop(0.65, "#ecf5ff");
+                        cloudGrad.addColorStop(1, "#cfd8dc");
+                        ctx.fillStyle = cloudGrad;
+                        ctx.beginPath();
+                        ctx.arc(-vw * 0.24, 0, vw * 0.23, 0, Math.PI * 2);
+                        ctx.arc(vw * 0.24, 0, vw * 0.22, 0, Math.PI * 2);
+                        ctx.arc(-vw * 0.08, -vh * 0.16, vw * 0.26, 0, Math.PI * 2);
+                        ctx.arc(vw * 0.12, -vh * 0.12, vw * 0.24, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
                     }
                 }
 
                 if (item.isPlayer) {
-                    // Les skis
-                    ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = vw*0.12; ctx.lineCap="round";
-                    ctx.beginPath(); ctx.moveTo(-vw*0.3, 0); ctx.lineTo(-vw*0.4, vh*0.4); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(vw*0.3, 0); ctx.lineTo(vw*0.4, vh*0.4); ctx.stroke();
+                    // Ombre au sol sous les skis (reste au sol quand la marmotte saute)
+                    let groundProj = project(player.x, 0, player.z);
+                    ctx.fillStyle = "rgba(0,0,0,0.22)";
+                    ctx.beginPath();
+                    ctx.ellipse(0, groundProj.y - p.y - vh*0.08, vw*0.32, vw*0.12, 0, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // Inclinaison dynamique de la marmotte et des skis dans les virages + FIGURE AÉRIENNE (Flèche du haut) !
+                    let bodyLean = player.dx * 0.01 + player.trickAngle * 0.28;
+                    let skiTurn = -player.dx * 0.015 + player.trickAngle; // En figure, les skis s'inclinent franchement sur le côté !
+                    let trickShiftX = player.trickAngle * vw * 0.14;      // Déport latéral stylé des skis pendant la figure
+                    ctx.rotate(bodyLean);
+
+                    // Les skis s'enflamment UNIQUEMENT lorsqu'on fait une figure sur une BOSSE ou sur une RAMPE (pas lors d'un saut normal !)
+                    let skisOnFire = !player.grounded && player.gliderTimer <= 0 && (((player.onMogulJump || player.onRampJump) && player.isDoingTrick && player.trickAngle > 0.25) || player.isGrindingRamp);
+
+                    // 1. Dessiner les deux skis détaillés SOUS les pattes de la marmotte (avec FLAMMES si figure sur bosse ou rampe !)
+                    drawDetailedSki(ctx, -vw * 0.13 + trickShiftX, vw, vh, skiTurn, skisOnFire);
+                    drawDetailedSki(ctx,  vw * 0.13 + trickShiftX, vw, vh, skiTurn, skisOnFire);
                     
-                    if (imagesLoaded.marmotte) {
+                    // 2. Dessiner la marmotte par-dessus ses fixations de skis
+                    if (imagesLoaded.marmotte && imgMarmotte.naturalWidth > 0) {
                         ctx.drawImage(imgMarmotte, -vw/2, -vh, vw, vh);
                     } else {
-                        // Remplacement si image introuvable (cercle marron)
-                        ctx.fillStyle = "#8e6e46"; ctx.beginPath(); ctx.arc(0, -vh/2, vw/2, 0, Math.PI*2); ctx.fill();
-                        ctx.fillStyle="white"; ctx.font="12px Arial"; ctx.fillText("404", -10, -vh/2);
+                        ctx.fillStyle = "#8e6e46";
+                        ctx.beginPath(); ctx.ellipse(0, -vh*0.45, vw*0.28, vh*0.38, 0, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = "#5d4037";
+                        ctx.beginPath(); ctx.arc(0, -vh*0.8, vw*0.18, 0, Math.PI*2); ctx.fill();
                     }
+
+                    // Si la marmotte vole en DELTAPLANE, on dessine la grande aile de deltaplane au-dessus d'elle !
+                    if (player.gliderTimer > 0) {
+                        drawAttachedHangGlider(ctx, vw, vh);
+                    }
+
+                    // 3. Bâtons de ski tenus par les pattes avant de la marmotte (levés pendant une figure !)
+                    let poleLift = player.trickAngle * vh * 0.18;
+                    ctx.strokeStyle = "#bdc3c7";
+                    ctx.lineWidth = 2.2;
+                    // Bâton gauche
+                    ctx.beginPath();
+                    ctx.moveTo(-vw * 0.14, -vh * 0.42);
+                    ctx.lineTo(-vw * 0.38, -vh * 0.18 - poleLift);
+                    ctx.stroke();
+                    // Rondelle du bâton gauche
+                    ctx.fillStyle = "#e74c3c";
+                    ctx.beginPath(); ctx.arc(-vw * 0.35, -vh * 0.20 - poleLift, 3.5, 0, Math.PI*2); ctx.fill();
+                    // Poignée gauche
+                    ctx.fillStyle = "#2c3e50";
+                    ctx.fillRect(-vw * 0.16, -vh * 0.45, 4, 7);
+
+                    // Bâton droit
+                    ctx.beginPath();
+                    ctx.moveTo(vw * 0.12, -vh * 0.42);
+                    ctx.lineTo(vw * 0.38, -vh * 0.18 - poleLift);
+                    ctx.stroke();
+                    // Rondelle du bâton droit
+                    ctx.fillStyle = "#e74c3c";
+                    ctx.beginPath(); ctx.arc(vw * 0.35, -vh * 0.20 - poleLift, 3.5, 0, Math.PI*2); ctx.fill();
+                    // Poignée droite
+                    ctx.fillStyle = "#2c3e50";
+                    ctx.fillRect(vw * 0.10, -vh * 0.45, 4, 7);
                 }
 
                 if (item.isEagle) {
-                    if (imagesLoaded.aigle) {
+                    let groundEagle = project(item.x, 0, item.z);
+                    ctx.fillStyle = "rgba(0,0,0,0.3)";
+                    ctx.beginPath(); ctx.ellipse(0, groundEagle.y - p.y, vw*0.22, vw*0.05, 0, 0, Math.PI*2); ctx.fill();
+                    if (imagesLoaded.aigle && imgAigle.naturalWidth > 0) {
                         ctx.drawImage(imgAigle, -vw/2, -vh/2, vw, vh);
                     } else {
-                        ctx.fillStyle = "#222"; ctx.fillRect(-vw/2, -vh/2, vw, vh); 
+                        ctx.fillStyle = "#2c3e50";
+                        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-vw/2, -vh*0.3); ctx.lineTo(-vw*0.15, -vh*0.1); ctx.lineTo(0, vh*0.15); ctx.lineTo(vw*0.15, -vh*0.1); ctx.lineTo(vw/2, -vh*0.3); ctx.closePath(); ctx.fill();
                     }
-                    ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(0, -item.y * p.scale, vw*0.4, vw*0.1, 0, 0, Math.PI*2); ctx.fill();
                 }
                 ctx.restore();
             });
+
+            // Affichage du compteur de vol en Deltaplane (10s) s'il est actif (simplifié)
+            if (player.gliderTimer > 0) {
+                let secLeft = (player.gliderTimer / 60).toFixed(1);
+                ctx.save();
+                ctx.font = "bold 18px 'Segoe UI', sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillStyle = "rgba(10, 28, 48, 0.78)";
+                ctx.beginPath();
+                ctx.roundRect(LOGIC_W / 2 - 65, 48, 130, 32, 16);
+                ctx.fill();
+                ctx.strokeStyle = "#00e5ff";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = "#ffffff";
+                ctx.fillText(`🪂 ${secLeft}s`, LOGIC_W / 2, 70);
+                ctx.restore();
+            }
+
+            // Affichage des messages flottants simplifiés (Popups)
+            for (let i = trickTextPopups.length - 1; i >= 0; i--) {
+                let pop = trickTextPopups[i];
+                pop.y -= 1.1;
+                pop.alpha -= 0.016;
+                if (pop.alpha <= 0) { trickTextPopups.splice(i, 1); continue; }
+                let a = Math.min(1, pop.alpha);
+                ctx.save();
+                ctx.font = `bold ${pop.size || 22}px 'Segoe UI', sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillStyle = `rgba(0, 0, 0, ${a * 0.75})`;
+                ctx.fillText(pop.text, pop.x + 2, pop.y + 2);
+                ctx.fillStyle = pop.color || "#ffd700";
+                ctx.globalAlpha = a;
+                ctx.fillText(pop.text, pop.x, pop.y);
+                ctx.restore();
+            }
         }
 
-        // --- LOGIQUE ---
-        function updateGame() {
+        // --- LOGIQUE GÉNÉRALE ---
+        function updateLogic() {
+            if (state === 'EAGLE_ATTACK') {
+                // La marmotte est stoppée par sa chute/obstacle et l'aigle fonce en piqué sur elle pour la manger !
+                currentSpeed *= 0.80;
+                groundScroll += currentSpeed;
+                player.dx *= 0.7;
+                if (player.y < 0) {
+                    player.y = Math.min(0, player.y + 8);
+                }
+                eagleAttackTimer--;
+                if (eagleAttackTimer <= 0) {
+                    gameOver(pendingGameOverTitle, pendingGameOverReason);
+                }
+                return;
+            }
             if (state !== 'PLAY') return;
-            frames++;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
+
+            groundScroll += currentSpeed;
+
+            // --- GESTION DYNAMIQUE DES VIRAGES FLUIDES (SANS SACCADE) ---
+            curveTimer--;
+            if (curveTimer <= 0) {
+                // Alterne entre virage court, courbe moyenne, chicane ou courte ligne droite
+                let rand = Math.random();
+                let sign = targetCurve >= 0 ? -1 : 1; // Favorise l'alternance gauche/droite (slalom)
+                if (Math.random() < 0.25) sign *= -1;
+
+                if (rand < 0.35) {
+                    // Virage marqué et court
+                    targetCurve = sign * (0.95 + Math.random() * 0.45);
+                    curveTimer = 65 + Math.floor(Math.random() * 45);
+                    curveLerpSpeed = 0.022;
+                } else if (rand < 0.78) {
+                    // Virage moyen dynamique
+                    targetCurve = sign * (0.50 + Math.random() * 0.45);
+                    curveTimer = 80 + Math.floor(Math.random() * 60);
+                    curveLerpSpeed = 0.018;
+                } else if (rand < 0.92) {
+                    // Courbe douce un peu plus longue
+                    targetCurve = sign * (0.28 + Math.random() * 0.30);
+                    curveTimer = 110 + Math.floor(Math.random() * 65);
+                    curveLerpSpeed = 0.014;
+                } else {
+                    // Courte portion droite
+                    targetCurve = 0;
+                    curveTimer = 50 + Math.floor(Math.random() * 45);
+                    curveLerpSpeed = 0.02;
+                }
+            }
+            // Double lissage exponentiel (targetCurve -> smoothCurve -> currentCurve) :
+            // élimine totalement les changements brusques de direction et rend le virage soyeux !
+            smoothCurve += (targetCurve - smoothCurve) * curveLerpSpeed;
+            currentCurve += (smoothCurve - currentCurve) * 0.04;
+
+            // Le décor en arrière-plan défile doucement quand on tourne !
+            bgScrollX += currentCurve * (currentSpeed * 0.07);
+            // Léger effet centrifuge progressif dans les virages
+            player.dx -= currentCurve * (currentSpeed * 0.012);
+
+            // Vitesse de base légèrement augmentée (24.5 = ~54 km/h), et courbe d'accélération douce (0.008) !
+            globalTargetSpeed = Math.min(88, 24.5 + (frames * 0.008));
+            // La maniabilité augmente légèrement avec la vitesse pour rester jouable à haute vitesse
+            player.acc = 4.5 + (currentSpeed - 24.5) * 0.04;
+
             if (keys.left) player.dx -= player.acc;
             if (keys.right) player.dx += player.acc;
-            player.dx *= player.friction; player.x += player.dx;
-            
-            player.x = Math.max(-WORLD_WIDTH/2, Math.min(WORLD_WIDTH/2, player.x));
+            player.dx *= player.friction; 
+            player.x += player.dx;
 
-            player.y += player.vy;
-            if (!player.grounded) { 
-                player.vy += 1.1; // Gravité plus faible = saut qui dure plus longtemps
-                if (player.y >= 0) { player.y = 0; player.grounded = true; player.vy = 0; } 
+            if (player.x < -WORLD_WIDTH/2) { player.x = -WORLD_WIDTH/2; player.dx = 0; }
+            if (player.x > WORLD_WIDTH/2) { player.x = WORLD_WIDTH/2; player.dx = 0; }
+
+            // Suivi de caméra horizontal plus centré pour toujours garder la marmotte bien dans le champ sur les bords de piste
+            cameraX += (player.x * 0.44 - cameraX) * 0.14;
+
+            // --- PHYSIQUE DU VOL EN DELTAPLANE (10 SECONDES), DU SAUT, DU SLIDE SUR RAMPE ET DES FIGURES ---
+            if (player.gliderTimer > 0) {
+                player.gliderTimer--;
+                player.grounded = false;
+                player.isRidingMogul = false;
+                player.isGrindingRamp = false;
+                player.isDoingTrick = false;
+                player.trickAngle *= 0.7;
+                // Plané fluide haut dans les airs au-dessus de tous les obstacles !
+                let targetGlideY = -215 + Math.sin(frames * 0.08) * 12;
+                player.y += (targetGlideY - player.y) * 0.12;
+                player.vy = 0;
+                if (player.gliderTimer === 0) {
+                    // Fin des 10 secondes de deltaplane : redescente douce et propre vers la piste !
+                    player.onMogulJump = false;
+                    player.onRampJump = false;
+                    player.trickAngle = 0;
+                    player.vy = 1.5;
+                }
+            } else {
+                if (!player.isGrindingRamp && !player.isRidingMogul) {
+                    player.y += player.vy;
+                }
+                if (!player.grounded) {
+                    player.airFrames++;
+
+                    // Inclinaison des skis sur le côté avec Flèche du Haut (⬆️) :
+                    // Ne se déclenche en figure que si on appuie sur ⬆️ en l'air (après une bosse, après un saut Espace, ou sur une rampe),
+                    // et non pas lors d'un simple saut normal déclenché depuis le sol avec ⬆️ !
+                    let wantsTrick = keys.up && (!player.jumpedWithUpArrow || player.onMogulJump || player.onRampJump);
+                    if (wantsTrick || player.isGrindingRamp) {
+                        player.isDoingTrick = true;
+                        player.trickTime++;
+                        // Incline franchement les skis sur le côté (jusqu'à ~70°)
+                        player.trickAngle += (1.22 - player.trickAngle) * 0.22;
+                    } else {
+                        player.isDoingTrick = false;
+                        // Les skis reviennent dans l'axe dès qu'on relâche la flèche du haut
+                        player.trickAngle *= 0.65;
+                        if (Math.abs(player.trickAngle) < 0.03) player.trickAngle = 0;
+                    }
+
+                    if (!player.isGrindingRamp) {
+                        if (player.onMogulJump) {
+                            // Sur une bosse : si on fait la figure en l'air (⬆️), on monte haut et on plane avec style (0.44) ;
+                            // si on NE fait PAS de figure en l'air (après 5 frames d'impulsion), on coupe l'élan vertical et on retombe très vite !
+                            if (player.isDoingTrick) {
+                                player.vy += 0.44;
+                            } else if (player.airFrames > 5) {
+                                if (player.vy < 0) player.vy *= 0.76;
+                                player.vy += 1.35;
+                            } else {
+                                player.vy += 0.55;
+                            }
+                        } else {
+                            // Gravité d'un saut normal (sans bosse) : retombée franche et naturelle sans effet de flottement !
+                            player.vy += 0.76;
+                        }
+                    }
+
+                    // Atterrissage au sol :
+                    if (player.y >= 0 && !player.isGrindingRamp) {
+                        player.y = 0;
+                        player.grounded = true;
+                        player.vy = 0;
+
+                        // Si les skis sont encore inclinés sur le côté (⬆️ non relâchée avant l'atterrissage) -> CHUTE et l'aigle nous fonce dessus !
+                        if ((keys.up && player.isDoingTrick) || Math.abs(player.trickAngle) > 0.40) {
+                            player.trickAngle = 0;
+                            player.isDoingTrick = false;
+                            triggerEagleCatch(
+                                "CHUTE À L'ATTERRISSAGE !",
+                                "Tu n'as pas relâché le bouton de figure (⬆️) avant d'atterrir pour remettre tes skis droits !"
+                            );
+                            return;
+                        }
+
+                        // Boost de vitesse à l'atterrissage proportionnel à la durée du saut / du passage sur la rampe !
+                        let isSpecialJump = (player.onMogulJump || player.onRampJump);
+                        let isPerfectTrick = (player.trickTime >= 6 && isSpecialJump);
+                        let jumpDurationFactor = Math.min(1.85, (player.airFrames / 34) + (player.trickTime / 24));
+                        let baseBoost = isSpecialJump ? 4.5 : 2.8;
+                        let boostBonus = baseBoost + jumpDurationFactor * (isSpecialJump ? 6.8 : 3.2);
+                        player.boostPower = boostBonus;
+                        currentSpeed = Math.min(98, Math.max(currentSpeed, globalTargetSpeed) + boostBonus);
+                        landingBoostTimer = Math.round((isSpecialJump ? 32 : 20) + jumpDurationFactor * (isSpecialJump ? 32 : 16));
+                        player.boostImmune = isPerfectTrick; // Le boost après une bosse ou rampe réussie immunise contre tous les obstacles !
+
+                        // Comptabilisation de la figure réussie sur BOSSE ou RAMPE (sans texte ni étincelles)
+                        if (isPerfectTrick) {
+                            tricksLanded++;
+                            let bonus = player.onRampJump ? 200 : 150;
+                            score += bonus;
+                            document.getElementById("trickCount").innerText = tricksLanded;
+                        }
+
+                        player.isDoingTrick = false;
+                        player.trickAngle = 0;
+                        player.trickTime = 0;
+                        player.onMogulJump = false;
+                        player.onRampJump = false;
+                        player.jumpedWithUpArrow = false;
+                        player.airFrames = 0;
+                    }
+                } else {
+                    player.trickAngle = 0;
+                    player.isDoingTrick = false;
+                    player.airFrames = 0;
+                }
             }
 
             score += (currentSpeed / 10);
             document.getElementById("score").innerText = Math.floor(score);
-
-            drawBackground();
-            drawGround();
-            handleObstacles();
-            drawParticles();
-            drawEntities();
+            document.getElementById("speedDisplay").innerText = Math.floor(currentSpeed * 2.2);
             
-            requestAnimationFrame(updateGame);
+            handleObstacles();
         }
 
-        function gameOver() {
+        function gameOver(reasonTitle, reasonDetail) {
             state = 'GAMEOVER';
+            document.getElementById("overlayTitle").innerText = reasonTitle || "PARTIE TERMINÉE";
+            document.getElementById("overlayReason").innerText = reasonDetail || "Tu as chuté sur la piste et l'aigle t'a rattrapé !";
             document.getElementById("overlayScreen").style.display = "flex";
             document.getElementById("finalScore").innerText = Math.floor(score);
+            const finalCardsEl = document.getElementById("finalCards");
+            if (finalCardsEl) finalCardsEl.innerText = cardsCollected;
+            keys.left = false; keys.right = false; keys.up = false;
         }
 
-        function resetGame() {
-            state = 'PLAY'; frames = 0; score = 0; currentSpeed = 35; eagleDanger = 0;
-            obstacles = []; particles = []; player.x = 0; player.y = 0; player.dx = 0;
+        function prepareGameWorld() {
+            frames = 0; score = 0; groundScroll = 0; distSinceLastObstacle = 900; distSinceLastScenery = 0; grassTouches = 0; 
+            tricksLanded = 0; cardsCollected = 0; groundCardSpawnedThisRun = false; trickTextPopups = [];
+            const cardEl = document.getElementById("cardCount");
+            if (cardEl) cardEl.innerText = "0";
+            globalTargetSpeed = 24.5; currentSpeed = 24.5; landingBoostTimer = 0;
+            currentCurve = 0; smoothCurve = 0; targetCurve = 0.75; curveLerpSpeed = 0.02; curveTimer = 85; bgScrollX = 0; cameraX = 0;
+            obstacles = []; sideScenery = []; particles = []; windLines = []; skiTracks = [];
+            initSnowTexture();
+            // Pré-remplir les bords de piste avec quelques sapins enneigés et chalets dès le départ
+            for (let z = 400; z < 4000; z += 300) {
+                let side = Math.random() > 0.5 ? 1 : -1;
+                let isChalet = Math.random() < 0.16;
+                sideScenery.push({
+                    x: side * (WORLD_WIDTH * 0.62 + Math.random() * 1100),
+                    y: 0, z: z,
+                    type: isChalet ? "chalet" : "snowTree",
+                    width: isChalet ? 680 : (340 + Math.random() * 140),
+                    height: isChalet ? 520 : (540 + Math.random() * 200),
+                    isScenery: true
+                });
+            }
+            // Placer une bosse de skatepark 3D longue et une rampe longue dès le départ pour tester les deux mécaniques !
+            obstacles.push({
+                x: -240, y: 0, z: 2100, type: "mogul",
+                width: 360, height: 130, lengthZ: 520, shape: 0, counted: false
+            });
+            obstacles.push({
+                x: 250, y: 0, z: 3400, type: "ramp",
+                width: 240, height: 95, lengthZ: 720, shape: 0, counted: false
+            });
+
+            player.x = 0; player.dx = 0; player.y = 0; player.vy = 0; player.grounded = true; player.boostImmune = false; player.boostPower = 0;
+            player.onMogulJump = false; player.isRidingMogul = false; player.ridingMegaMogul = false;
+            player.wantsMegaJump = false; player.gliderTimer = 0;
+            player.onRampJump = false; player.isGrindingRamp = false;
+            player.jumpedWithUpArrow = false; player.airFrames = 0;
+            player.isDoingTrick = false; player.trickAngle = 0; player.trickTime = 0;
+            eagleAttackTimer = 0;
+            eagle.x = 0; eagle.y = -595; eagle.z = 310; eagle.targetY = -595; eagle.targetZ = 310;
+
+            document.getElementById("score").innerText = "0";
+            document.getElementById("speedDisplay").innerText = "54";
+            document.getElementById("trickCount").innerText = "0";
+        }
+
+        function initGame() {
+            if (document.activeElement) document.activeElement.blur(); // Évite que le bouton garde le focus sur la barre ESPACE !
+            prepareGameWorld();
+            state = 'PLAY';
+            
+            // CACHER TOUTES LES INTERFACES SUPERFLUES ET LANCER LA MUSIQUE DE FOND
             document.getElementById("overlayScreen").style.display = "none";
-            updateGame();
+            document.getElementById("rulesScreen").style.display = "none";
+            document.getElementById("videoContainer").style.display = "none";
+            startBackgroundMusic();
         }
 
-        requestAnimationFrame(updateGame);
+        function gameLoop() {
+            if (state !== 'VIDEO') { // Dès que state = PLAY, on dessine en Haute Définition (1600x900)
+                frames++;
+                ctx.setTransform(canvas.width / LOGIC_W, 0, 0, canvas.height / LOGIC_H, 0, 0);
+                ctx.clearRect(0, 0, LOGIC_W, LOGIC_H);
 
+                updateLogic();
+                drawComplexBackground();
+                drawGround();
+                drawEffects();
+                drawEntities();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Lance la vidéo d'introduction au démarrage (avec bouton "Passer la cinématique" et passage auto à la fin) !
+        startIntroSequence();
+        gameLoop();
     </script>
 </body>
 </html>
