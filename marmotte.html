@@ -2,7 +2,10 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>La Fuite de la Marmotte PRO: Piste Noire</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -130,6 +133,7 @@
         @media (max-width: 540px) and (orientation: portrait) {
             .rules-grid { grid-template-columns: 1fr; }
         }
+
         /* Bouton central si le navigateur demande un clic pour lancer la vidéo avec le son */
         #btnPlayIntroWithSound {
             position: absolute; padding: 18px 34px; font-size: 20px; font-weight: 800;
@@ -183,9 +187,17 @@
         }
         #btnMuteBottom:hover { background: rgba(255, 255, 255, 0.22); border-color: white; transform: scale(1.03); }
 
-        #touchControls { position: absolute; bottom: 72px; left: 50%; transform: translateX(-50%); display: none; width: 94%; justify-content: space-between; gap: 10px; z-index: 80; pointer-events: auto; touch-action: none; }
-        .touch-btn { flex: 1; padding: 18px 10px; background: rgba(15, 32, 48, 0.72); border: 2px solid rgba(255,255,255,0.85); color: #fff; border-radius: 16px; cursor: pointer; text-align: center; user-select: none; -webkit-user-select: none; font-weight: 800; font-size: 17px; touch-action: none; box-shadow: 0 4px 14px rgba(0,0,0,0.45); }
-        .touch-btn:active { background: rgba(46, 204, 113, 0.75); transform: scale(0.97); }
+        #touchControls { position: absolute; bottom: 22px; right: 24px; display: none; z-index: 80; pointer-events: auto; touch-action: none; }
+        #btnLeft, #btnRight { display: none !important; }
+        #btnJump {
+            padding: 12px 20px; background: rgba(15, 32, 48, 0.75);
+            border: 2px solid rgba(255,255,255,0.85); color: #fff;
+            border-radius: 28px; cursor: pointer; text-align: center;
+            user-select: none; -webkit-user-select: none;
+            font-weight: 800; font-size: 14px; touch-action: none;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+        }
+        #btnJump:active { background: rgba(46, 204, 113, 0.8); transform: scale(0.95); }
         @media (max-width: 1024px), (pointer: coarse) { #touchControls { display: flex; } }
         body.touch-device #touchControls { display: flex; }
 
@@ -599,25 +611,19 @@
         bindTouchButton('btnRight', () => { keys.right = true; }, () => { keys.right = false; });
         bindTouchButton('btnJump', triggerTouchJumpStart, () => { keys.up = false; });
 
-        // Permet aussi de diriger ou sauter en touchant directement le tiers gauche, central ou droit de l'écran sur téléphone !
+        // Permet de diriger en touchant la moitié gauche ou droite de l'écran (sans interférer avec le bouton Saut !)
         function handleCanvasTouches(e) {
             if (state !== 'PLAY') return;
             e.preventDefault();
-            let leftPressed = false, rightPressed = false, jumpPressed = false;
+            let leftPressed = false, rightPressed = false;
             const w = window.innerWidth;
             for (let i = 0; i < e.touches.length; i++) {
                 const tx = e.touches[i].clientX;
-                if (tx < w * 0.33) leftPressed = true;
-                else if (tx > w * 0.67) rightPressed = true;
-                else jumpPressed = true;
+                if (tx < w * 0.5) leftPressed = true;
+                else rightPressed = true;
             }
             keys.left = leftPressed;
             keys.right = rightPressed;
-            if (jumpPressed && !keys.up) {
-                triggerTouchJumpStart();
-            } else if (!jumpPressed) {
-                keys.up = false;
-            }
         }
         canvas.addEventListener('touchstart', handleCanvasTouches, { passive: false });
         canvas.addEventListener('touchmove', handleCanvasTouches, { passive: false });
@@ -689,6 +695,14 @@
 
         function startGameFromRules() {
             if (document.activeElement) document.activeElement.blur();
+            // Demande automatiquement le plein écran sur mobile pour cacher la barre d'adresse !
+            if (('ontouchstart' in window || navigator.maxTouchPoints > 0) && !document.fullscreenElement) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                }
+            }
             document.getElementById("rulesScreen").style.display = "none";
             initGame();
         }
