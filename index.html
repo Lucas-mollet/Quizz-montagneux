@@ -140,6 +140,7 @@
         <button id="nav-carnet" onclick="switchTab('carnet')">📖 Carnet <span id="carnet-badge" class="nav-badge hidden">0</span></button>
         <button id="nav-inventaire" onclick="switchTab('inventaire')">🎒 Inventaire</button>
         <button id="nav-statistiques" onclick="switchTab('statistiques')">📊 Stats</button>
+        <button id="nav-bonus" onclick="switchTab('bonus')">🎁 Bonus</button>
     </nav>
 
     <div id="section-accueil" class="container">
@@ -255,6 +256,25 @@
         </div>
     </div>
 
+    <div id="section-bonus" class="container hidden">
+        <div class="wip-box" style="text-align: center;">
+            <h2 style="color: #2e7d32; margin-top: 0;">⛷️ Rubrique Bonus : La Fuite de la Marmotte</h2>
+            <p style="color: #444; font-size: 16px; max-width: 760px; margin: 0 auto 18px auto; line-height: 1.5;">
+                Dévale la piste noire pour échapper à l'Aigle Royal ! Plus tu réalises de <strong>figures aériennes (⬆️)</strong> sur les <strong>bosses et les rampes</strong>, plus tu augmentes la probabilité de faire apparaître des <strong>Cartes Animal (🐾)</strong> sur la piste. En <strong>deltaplane</strong>, évite les petits nuages pour récupérer la carte cachée juste derrière !
+            </p>
+
+            <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 20px;">
+                <button class="btn-start" style="margin: 0; width: auto; padding: 13px 26px; background: #2e7d32;" onclick="lancerJeuMarmotte()">▶️ Lancer le jeu ici</button>
+                <a href="marmotte.html" class="btn-start" style="margin: 0; width: auto; padding: 13px 26px; background: #1976d2; text-decoration: none; display: inline-block;">⛶ Ouvrir en grand écran</a>
+                <button class="btn-start" style="margin: 0; width: auto; padding: 13px 26px; background: #e53935;" onclick="decouvrirAnimal()">🐾 Découvrir un animal (<span id="count-animaux-bonus">0</span>)</button>
+            </div>
+
+            <div id="marmotte-game-wrapper" class="hidden" style="position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.28); border: 3px solid #2e7d32; background: #09304e;">
+                <iframe id="marmotte-iframe" src="" style="width: 100%; height: 100%; border: none;" allow="autoplay; fullscreen"></iframe>
+            </div>
+        </div>
+    </div>
+
     <div id="reward-overlay" class="hidden">
         <h2 id="reward-header-text" style="text-align:center; color:white; margin-bottom: 10px; min-height: 40px;"></h2>
         <div id="reward-emoji-container" style="text-align:center;">
@@ -284,6 +304,7 @@
         let eloJoueur = 1000;
         let streak = 0;
         let grainesGagnees = 0, grainesPlantees = 0, animauxTires = 0, sacsOuverts = 0;
+        let bonusAnimauxGagnes = 0; // Cartes "Animal" gagnées dans le mini-jeu bonus de la Marmotte !
         
         let rewardTypePending = ""; 
         let pendingSpecies = null;
@@ -305,6 +326,7 @@
             grainesPlantees = JSON.parse(localStorage.getItem("grainesPlantees")) || 0;
             animauxTires = JSON.parse(localStorage.getItem("animauxTires")) || 0;
             sacsOuverts = JSON.parse(localStorage.getItem("sacsOuverts")) || 0;
+            bonusAnimauxGagnes = parseInt(localStorage.getItem("bonusAnimauxGagnes")) || 0;
         } catch (e) {}
 
         function sauvegarderProgression() {
@@ -315,7 +337,20 @@
             localStorage.setItem("grainesPlantees", grainesPlantees);
             localStorage.setItem("animauxTires", animauxTires);
             localStorage.setItem("sacsOuverts", sacsOuverts);
+            localStorage.setItem("bonusAnimauxGagnes", bonusAnimauxGagnes);
         }
+
+        // Synchronisation en direct quand le joueur gagne une Carte Animal dans le jeu de la Marmotte !
+        window.addEventListener("message", (e) => {
+            if (e.data && e.data.type === "ANIMAL_CARD_WON") {
+                bonusAnimauxGagnes = parseInt(localStorage.getItem("bonusAnimauxGagnes")) || 0;
+                updateHUD();
+            }
+        });
+        window.addEventListener("focus", () => {
+            bonusAnimauxGagnes = parseInt(localStorage.getItem("bonusAnimauxGagnes")) || 0;
+            updateHUD();
+        });
 
         async function chargerDonnees() {
             const resQ = await fetch(urlQuestions);
@@ -355,8 +390,9 @@
         }
 
         function updateHUD() {
+            bonusAnimauxGagnes = parseInt(localStorage.getItem("bonusAnimauxGagnes")) || 0;
             const niv = Math.floor(grainesGagnees / 5);
-            const animauxGagnes = Math.floor(grainesGagnees / 3);
+            const animauxGagnes = Math.floor(grainesGagnees / 3) + bonusAnimauxGagnes;
             
             document.getElementById("niveau-joueur").innerText = niv;
             document.getElementById("niveau-progress").innerText = grainesGagnees % 5;
@@ -378,6 +414,8 @@
             
             document.getElementById("count-graines-planter").innerText = gAttente;
             document.getElementById("count-animaux-decouvrir").innerText = aAttente;
+            const bonusBtnCount = document.getElementById("count-animaux-bonus");
+            if (bonusBtnCount) bonusBtnCount.innerText = aAttente;
             document.getElementById("count-sacs").innerText = sAttente;
             document.getElementById("bag-container").classList.toggle("hidden", sAttente <= 0);
             
@@ -552,7 +590,22 @@
         }
 
         function planterGraine() { if(grainesGagnees > grainesPlantees){ grainesPlantees++; sauvegarderProgression(); triggerReward('plante'); } }
-        function decouvrirAnimal() { if(Math.floor(grainesGagnees/3) > animauxTires){ animauxTires++; sauvegarderProgression(); triggerReward('animal'); } }
+        function decouvrirAnimal() {
+            bonusAnimauxGagnes = parseInt(localStorage.getItem("bonusAnimauxGagnes")) || 0;
+            if ((Math.floor(grainesGagnees / 3) + bonusAnimauxGagnes) > animauxTires) {
+                animauxTires++;
+                sauvegarderProgression();
+                triggerReward('animal');
+            }
+        }
+
+        function lancerJeuMarmotte() {
+            const wrapper = document.getElementById("marmotte-game-wrapper");
+            const iframe = document.getElementById("marmotte-iframe");
+            wrapper.classList.remove("hidden");
+            iframe.src = "marmotte.html";
+            iframe.focus();
+        }
 
         function buildCardHTML(sp, lock = false, count = 0) {
             if(lock) return `<div class="card locked"><h3>???</h3><span class="tag">${sp.rarete}</span></div>`;
@@ -650,6 +703,12 @@
             document.querySelectorAll("nav > button").forEach(b=>b.classList.remove("active"));
             document.getElementById("section-"+t).classList.remove("hidden");
             document.getElementById("nav-"+t).classList.add("active");
+            if (t !== 'bonus') {
+                const iframe = document.getElementById("marmotte-iframe");
+                if (iframe && iframe.src) iframe.src = "";
+                const wrapper = document.getElementById("marmotte-game-wrapper");
+                if (wrapper) wrapper.classList.add("hidden");
+            }
             if(t==='carnet') { switchSubTabCarnet('plantes'); renderInventory(); }
             if(t==='inventaire') { switchSubTabInventaire('tresorerie'); renderLaboratoire(); }
             updateHUD();
