@@ -166,9 +166,28 @@
         }
         #btnMuteBottom:hover { background: rgba(255, 255, 255, 0.22); border-color: white; transform: scale(1.03); }
 
-        #touchControls { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: none; width: 92%; justify-content: space-between; z-index: 25; }
+        #touchControls { position: absolute; bottom: 68px; left: 50%; transform: translateX(-50%); display: none; width: 92%; justify-content: space-between; z-index: 25; }
         .touch-btn { flex: 1; padding: 15px; margin: 0 5px; background: rgba(15,32,48,0.65); border: 2px solid #fff; color: #fff; border-radius: 12px; cursor: pointer; text-align: center; user-select: none; font-weight: bold; }
-        @media (max-width: 900px) { .controls-info { display: none; } #touchControls { display: flex; } }
+        @media (max-width: 950px), (pointer: coarse) { #touchControls { display: flex; } }
+
+        /* Écran de Pause épuré */
+        #pauseScreen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(8, 18, 30, 0.80);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; z-index: 95; backdrop-filter: blur(6px); padding: 20px;
+        }
+        #pauseScreen h2 { font-size: 40px; margin: 0 0 22px 0; color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.7); }
+        .pause-buttons { display: flex; flex-direction: column; gap: 12px; width: 260px; }
+        .pause-btn {
+            padding: 13px 22px; font-size: 17px; font-weight: bold; cursor: pointer;
+            border-radius: 28px; border: 2px solid rgba(255,255,255,0.4);
+            background: rgba(15, 32, 48, 0.85); color: white; text-decoration: none;
+            transition: 0.2s;
+        }
+        .pause-btn:hover { background: rgba(255,255,255,0.22); border-color: #fff; transform: scale(1.03); }
+        .pause-btn.resume { background: #2ecc71; border-color: #2ecc71; }
+        .pause-btn.quit { background: rgba(231, 76, 60, 0.88); }
     </style>
 </head>
 <body>
@@ -224,13 +243,20 @@
         <canvas id="gameCanvas" width="1600" height="900"></canvas>
 
         <div id="topHud">
-            <div id="scoreBoard">Distance: <span id="score">0</span>m | Vitesse: <span id="speedDisplay">50</span> km/h | Figures: <span id="trickCount">0</span> 🏅 | Cartes: <span id="cardCount">0</span> 🐾</div>
-            <div class="controls-info">⬅️ ➡️ Déplacer | ESPACE Sauter | ⬆️ Figure en l'air (relâcher avant d'atterrir !)</div>
+            <div id="scoreBoard">Distance : <span id="score">0</span> m</div>
             <div id="topButtons">
-                <button class="hud-btn" onclick="showRulesScreen()">📖 Règles</button>
-                <button class="hud-btn" id="btnMusic" onclick="toggleMusic()">🔊 Musique</button>
-                <button class="hud-btn" id="btnFullscreen" onclick="toggleFullscreen()">⛶ Plein écran</button>
-                <a href="index.html" class="hud-btn btn-back">Quitter</a>
+                <button class="hud-btn" id="btnPause" onclick="togglePause()">⏸️ Pause</button>
+            </div>
+        </div>
+
+        <!-- Menu Pause -->
+        <div id="pauseScreen">
+            <h2>⏸️ Jeu en Pause</h2>
+            <div class="pause-buttons">
+                <button class="pause-btn resume" onclick="togglePause()">▶️ Reprendre</button>
+                <button class="pause-btn" onclick="showRulesScreen()">📖 Règles du jeu</button>
+                <button class="pause-btn" onclick="toggleFullscreen()">⛶ Plein écran</button>
+                <a href="index.html" class="pause-btn quit">🚪 Quitter</a>
             </div>
         </div>
 
@@ -286,10 +312,22 @@
             if (introVideo) {
                 introVideo.muted = isMusicMuted;
             }
-            document.getElementById("btnMusic").innerText = isMusicMuted ? "🔇 Muet" : "🔊 Musique";
             const bottomBtn = document.getElementById("btnMuteBottom");
             if (bottomBtn) {
                 bottomBtn.innerText = isMusicMuted ? "🔇 Réactiver le son" : "🔊 Couper le son";
+            }
+        }
+
+        function togglePause() {
+            if (document.activeElement) document.activeElement.blur();
+            const pauseEl = document.getElementById("pauseScreen");
+            if (state === 'PLAY') {
+                state = 'PAUSED';
+                pauseEl.style.display = "flex";
+                keys.left = false; keys.right = false; keys.up = false;
+            } else if (state === 'PAUSED') {
+                state = 'PLAY';
+                pauseEl.style.display = "none";
             }
         }
 
@@ -468,6 +506,14 @@
                 }
                 return;
             }
+            // Touche Échap ou P pour mettre en Pause / Reprendre
+            if (e.code === 'Escape' || e.code === 'KeyP') {
+                if (state === 'PLAY' || state === 'PAUSED') {
+                    e.preventDefault();
+                    togglePause();
+                    return;
+                }
+            }
             if (state !== 'PLAY') return;
             if (bgMusic && bgMusic.paused && !isMusicMuted) bgMusic.play().catch(() => {});
             if (e.code === 'ArrowLeft' || e.code === 'KeyA' || e.code === 'KeyQ') keys.left = true;
@@ -498,12 +544,21 @@
             if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'KeyZ') keys.up = false;
         });
 
-        // Contrôles tactiles
+        // Contrôles tactiles (optimisés pour jouer au téléphone : saut + maintien pour les figures en l'air !)
         document.getElementById('btnLeft').addEventListener('touchstart', (e)=> { e.preventDefault(); keys.left = true; });
         document.getElementById('btnLeft').addEventListener('touchend', ()=> { keys.left = false; });
         document.getElementById('btnRight').addEventListener('touchstart', (e)=> { e.preventDefault(); keys.right = true; });
         document.getElementById('btnRight').addEventListener('touchend', ()=> { keys.right = false; });
-        document.getElementById('btnJump').addEventListener('touchstart', (e)=> { e.preventDefault(); if (player.grounded && !player.isRidingMogul) jump(false); else keys.up = true; });
+        document.getElementById('btnJump').addEventListener('touchstart', (e)=> {
+            e.preventDefault();
+            if (player.isRidingMogul) player.wantsMegaJump = true;
+            if (player.grounded && !player.isRidingMogul && player.gliderTimer <= 0) {
+                jump(true);
+            } else {
+                player.jumpedWithUpArrow = false;
+            }
+            keys.up = true;
+        });
         document.getElementById('btnJump').addEventListener('touchend', ()=> { keys.up = false; });
 
         function jump(fromUpArrow = false) {
@@ -565,6 +620,7 @@
             state = 'RULES';
             document.getElementById("videoContainer").style.display = "none";
             document.getElementById("overlayScreen").style.display = "none";
+            document.getElementById("pauseScreen").style.display = "none";
             document.getElementById("rulesScreen").style.display = "flex";
         }
 
@@ -1088,35 +1144,40 @@
             });
         }
 
-        // Séquence aérienne systématique en Deltaplane : rideau de petits nuages bien au loin + Carte Animal juste derrière !
+        // Séquence aérienne en Deltaplane : nuages un peu plus espacés mais répartis TOUT DU LONG du vol + Carte Animal cachée derrière !
         function spawnGliderSkyChallenge() {
-            // On choisit un couloir d'ouverture aléatoire à travers les petits nuages
             let gapSide = Math.random() > 0.5 ? 1 : -1;
             let cardX = gapSide * 340;
 
-            // Vague 1 de petits nuages placée LOIN DEVANT (z = 4200 et 4650) pour laisser largement le temps de les voir venir et de se décaler !
-            obstacles.push({
-                x: -gapSide * 440, y: -215, z: 4200, type: "skyCloud",
-                width: 310, height: 135, lengthZ: 110, counted: false
-            });
-            obstacles.push({
-                x: gapSide * 120, y: -215, z: 4650, type: "skyCloud",
-                width: 300, height: 130, lengthZ: 110, counted: false
+            // Petits nuages espacés régulièrement (tous les ~1150 Z) TOUT DU LONG des 10 secondes de vol (de z = 4400 jusqu'à z = 18200) !
+            const cloudRows = [
+                { z: 4400, x: -gapSide * 420 },
+                { z: 5550, x:  gapSide * 320 },
+                { z: 6700, x: -gapSide * 180 },
+                { z: 7850, x:  gapSide * 460 },
+                { z: 9000, x: -gapSide * 480 },
+                { z: 10150, x: gapSide * 150 },
+                { z: 11300, x: -gapSide * 360 },
+                { z: 12450, x: gapSide * 420 },
+                // Porte de nuages juste devant la Carte Animal (z = 13600 et 14350) :
+                { z: 13600, x: cardX - gapSide * 490 },
+                { z: 14350, x: cardX + gapSide * 310 },
+                // Nuages qui continuent après la carte jusqu'à la fin du vol en deltaplane :
+                { z: 16200, x: -gapSide * 350 },
+                { z: 17350, x:  gapSide * 380 },
+                { z: 18500, x:  0 }
+            ];
+
+            cloudRows.forEach(row => {
+                obstacles.push({
+                    x: row.x, y: -215, z: row.z, type: "skyCloud",
+                    width: 305, height: 135, lengthZ: 110, counted: false
+                });
             });
 
-            // Vague 2 de petits nuages plus loin devant la carte (z = 5900 et 6350) : protège l'accès à l'item !
+            // Item Carte Animal placé SYSTÉMATIQUEMENT en l'air derrière les nuages (z = 15150) !
             obstacles.push({
-                x: cardX - gapSide * 460, y: -215, z: 5900, type: "skyCloud",
-                width: 320, height: 140, lengthZ: 110, counted: false
-            });
-            obstacles.push({
-                x: cardX + gapSide * 290, y: -215, z: 6350, type: "skyCloud",
-                width: 310, height: 135, lengthZ: 110, counted: false
-            });
-
-            // Item Carte Animal placé SYSTÉMATIQUEMENT en l'air juste derrière les petits nuages (z = 7100) !
-            obstacles.push({
-                x: cardX, y: -215, z: 7100, type: "skyAnimalCard",
+                x: cardX, y: -215, z: 15150, type: "skyAnimalCard",
                 width: 150, height: 195, lengthZ: 80, counted: false
             });
         }
@@ -1163,19 +1224,18 @@
             let spawnInterval = Math.max(440, 960 - (currentSpeed - 20) * 8);
             if (distSinceLastObstacle > spawnInterval) {
                 let rand = Math.random();
-                let type = "tree";                     // 26% sapin (0.00 à 0.26)
-                if (rand >= 0.26) type = "rock";       // 23% rocher (0.26 à 0.49)
-                if (rand >= 0.49) type = "log";        // 22% tronc d'arbre couché / rondin (0.49 à 0.71)
-                if (rand >= 0.71) type = "grass";      // 16% herbe (0.71 à 0.87)
-                if (rand >= 0.880) type = "mogul";     // 5% BOSSE 3D normale (0.880 à 0.930)
-                if (rand >= 0.930) type = "megaMogul"; // Super bosse / super rampe encore plus rare (~0.38% : 0.930 à 0.9338) !
-                if (rand >= 0.9338) type = "ramp";     // ~6.6% RAMPE dans le sens de la piste (0.9338 à 1.00)
+                let type = "tree";                     // 27% sapin (0.00 à 0.27)
+                if (rand >= 0.27) type = "rock";       // 24% rocher (0.27 à 0.51)
+                if (rand >= 0.51) type = "log";        // 22% tronc d'arbre couché / rondin (0.51 à 0.73)
+                if (rand >= 0.73) type = "grass";      // 16.5% herbe (0.73 à 0.895)
+                if (rand >= 0.895) type = "mogul";     // 5% BOSSE 3D normale (0.895 à 0.945)
+                if (rand >= 0.945) type = "megaMogul"; // Super bosse / super rampe encore plus rare (~0.20% : 0.945 à 0.9470) !
+                if (rand >= 0.9470) type = "ramp";     // ~5.3% RAMPE dans le sens de la piste (0.9470 à 1.00)
 
-                // Probabilité d'apparition d'un item "Carte Animal" (🐾) sur la piste :
+                // Probabilité d'apparition d'un item "Carte Animal" (🐾) sur la piste encore diminuée :
                 // - AUCUNE apparition avant d'avoir réussi au moins 6 figures sur des bosses/rampes (tricksLanded >= 6) !
-                // - Probabilité très basse (~0.6% par vague après 6 figures, augmentant légèrement avec chaque figure supplémentaire)
-                //   pour n'apparaître qu'environ 1 fois toutes les 4 parties en moyenne !
-                let bonusCardChance = (tricksLanded >= 6) ? Math.min(0.020, 0.0055 + (tricksLanded - 6) * 0.002) : 0;
+                // - Probabilité très faible (~0.28% par vague après 6 figures, +0.1% par figure supplémentaire) !
+                let bonusCardChance = (tricksLanded >= 6) ? Math.min(0.010, 0.0028 + (tricksLanded - 6) * 0.001) : 0;
                 if (!groundCardSpawnedThisRun && player.gliderTimer <= 0 && tricksLanded >= 6 && Math.random() < bonusCardChance && type !== "megaMogul") {
                     type = "animalCard";
                     groundCardSpawnedThisRun = true;
@@ -1314,7 +1374,8 @@
                             obs.gliderTaken = true;
                             tricksLanded++;
                             score += 150;
-                            document.getElementById("trickCount").innerText = tricksLanded;
+                            const tcEl = document.getElementById("trickCount");
+                            if (tcEl) tcEl.innerText = tricksLanded;
                             player.gliderTimer = 600; // 10 secondes de vol à 60 FPS !
                             player.grounded = false;
                             player.isRidingMogul = false;
@@ -1544,6 +1605,161 @@
             ctx.lineTo(0, -vh * 1.0);
             ctx.lineTo(vw*0.49, -bodyH*0.92);
             ctx.stroke();
+        }
+
+        // --- DESSIN D'UN ROCHER ALPIN EN GRANIT SCULPTÉ (FACETTES 3D + NEIGE AU SOMMET) ---
+        function drawAlpineRock(ctx, vw, vh, shape) {
+            // 1. Ombre portée douce sur la neige
+            ctx.fillStyle = "rgba(20, 45, 70, 0.25)";
+            ctx.beginPath();
+            ctx.ellipse(vw * 0.03, vh * 0.03, vw * 0.48, vw * 0.13, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 2. Petit bloc rocheux secondaire sur le côté pour un aspect naturel
+            let sideSign = (shape === 1) ? -1 : 1;
+            ctx.fillStyle = "#4b6584";
+            ctx.beginPath();
+            ctx.moveTo(sideSign * vw * 0.18, 0);
+            ctx.lineTo(sideSign * vw * 0.34, -vh * 0.42);
+            ctx.lineTo(sideSign * vw * 0.48, -vh * 0.22);
+            ctx.lineTo(sideSign * vw * 0.52, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            // 3. Corps principal du rocher (facette de base gris-ardoise)
+            let rockGrad = ctx.createLinearGradient(-vw * 0.45, -vh, vw * 0.45, 0);
+            rockGrad.addColorStop(0, "#778ca3");
+            rockGrad.addColorStop(0.55, "#576574");
+            rockGrad.addColorStop(1, "#2f3640");
+            ctx.fillStyle = rockGrad;
+
+            ctx.beginPath();
+            if (shape === 0) {
+                ctx.moveTo(-vw * 0.46, 0);
+                ctx.lineTo(-vw * 0.40, -vh * 0.58);
+                ctx.lineTo(-vw * 0.16, -vh * 0.96);
+                ctx.lineTo(vw * 0.18, -vh * 0.88);
+                ctx.lineTo(vw * 0.42, -vh * 0.48);
+                ctx.lineTo(vw * 0.46, 0);
+            } else if (shape === 1) {
+                ctx.moveTo(-vw * 0.44, 0);
+                ctx.lineTo(-vw * 0.34, -vh * 0.72);
+                ctx.lineTo(-vw * 0.04, -vh * 1.0);
+                ctx.lineTo(vw * 0.28, -vh * 0.76);
+                ctx.lineTo(vw * 0.45, -vh * 0.35);
+                ctx.lineTo(vw * 0.44, 0);
+            } else {
+                ctx.moveTo(-vw * 0.48, 0);
+                ctx.lineTo(-vw * 0.28, -vh * 0.84);
+                ctx.lineTo(vw * 0.08, -vh * 0.98);
+                ctx.lineTo(vw * 0.36, -vh * 0.62);
+                ctx.lineTo(vw * 0.46, 0);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // 4. Facette éclairée (côté gauche/haut prenant la lumière du soleil alpin)
+            ctx.fillStyle = "rgba(210, 226, 240, 0.28)";
+            ctx.beginPath();
+            ctx.moveTo(-vw * 0.44, 0);
+            ctx.lineTo(-vw * 0.34, -vh * 0.66);
+            ctx.lineTo(-vw * 0.05, -vh * 0.95);
+            ctx.lineTo(vw * 0.04, -vh * 0.45);
+            ctx.lineTo(-vw * 0.12, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            // 5. Facette d'ombre minérale (côté droit)
+            ctx.fillStyle = "rgba(18, 28, 40, 0.34)";
+            ctx.beginPath();
+            ctx.moveTo(vw * 0.04, -vh * 0.45);
+            ctx.lineTo(-vw * 0.05, -vh * 0.95);
+            ctx.lineTo(vw * 0.24, -vh * 0.80);
+            ctx.lineTo(vw * 0.44, 0);
+            ctx.lineTo(-vw * 0.12, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            // 6. Arêtes rocheuses et fissures de granit
+            ctx.strokeStyle = "rgba(30, 42, 56, 0.55)";
+            ctx.lineWidth = Math.max(1, vw * 0.012);
+            ctx.beginPath();
+            ctx.moveTo(-vw * 0.05, -vh * 0.95);
+            ctx.lineTo(vw * 0.04, -vh * 0.45);
+            ctx.lineTo(-vw * 0.12, 0);
+            ctx.moveTo(vw * 0.04, -vh * 0.45);
+            ctx.lineTo(vw * 0.28, -vh * 0.25);
+            ctx.stroke();
+
+            // 7. Coiffe de neige fraîche posée sur la crête du rocher + bourrelet de neige au pied
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.moveTo(-vw * 0.26, -vh * 0.72);
+            ctx.quadraticCurveTo(-vw * 0.05, -vh * 1.03, vw * 0.22, -vh * 0.78);
+            ctx.quadraticCurveTo(vw * 0.06, -vh * 0.64, -vw * 0.04, -vh * 0.70);
+            ctx.quadraticCurveTo(-vw * 0.16, -vh * 0.62, -vw * 0.26, -vh * 0.72);
+            ctx.fill();
+
+            ctx.fillStyle = "rgba(240, 248, 255, 0.92)";
+            ctx.beginPath();
+            ctx.ellipse(0, 0, vw * 0.47, Math.max(2, vh * 0.08), 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // --- DESSIN D'UNE ZONE D'HERBE D'ALPAGE NATURELLE (TERRE DE DEGEL, MOUSSE & TOUFFES D'HERBE COURBÉES) ---
+        function drawAlpineGrassPatch(ctx, vw, vh, shape) {
+            let patchH = Math.max(6, vh * 2.1);
+
+            // 1. Bordure extérieure de neige fondante / terre humide d'alpage
+            ctx.fillStyle = "rgba(185, 208, 228, 0.65)";
+            ctx.beginPath();
+            ctx.ellipse(0, 0, vw * 0.53, patchH * 1.18, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#5d4037";
+            ctx.beginPath();
+            ctx.ellipse(0, 0, vw * 0.49, patchH * 1.02, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 2. Tapis d'herbe alpine en dégradé naturel (vert mousse profond -> vert tendre)
+            let grassGrad = ctx.createLinearGradient(0, -patchH, 0, patchH);
+            grassGrad.addColorStop(0, "#6ab04c");
+            grassGrad.addColorStop(0.5, "#388e3c");
+            grassGrad.addColorStop(1, "#1e5631");
+            ctx.fillStyle = grassGrad;
+
+            ctx.beginPath();
+            if (shape === 0) {
+                ctx.ellipse(0, 0, vw * 0.47, patchH * 0.90, 0, 0, Math.PI * 2);
+            } else if (shape === 1) {
+                ctx.ellipse(-vw * 0.16, 0, vw * 0.33, patchH * 0.88, 0.04, 0, Math.PI * 2);
+                ctx.ellipse(vw * 0.16, patchH * 0.06, vw * 0.33, patchH * 0.85, -0.04, 0, Math.PI * 2);
+            } else {
+                ctx.ellipse(0, 0, vw * 0.48, patchH * 0.86, 0, 0, Math.PI * 2);
+                ctx.ellipse(-vw * 0.22, -patchH * 0.15, vw * 0.24, patchH * 0.65, 0, 0, Math.PI * 2);
+            }
+            ctx.fill();
+
+            // 3. Touffes de brins d'herbe courbés et petites pierres d'alpage réparties sur la plaque
+            let bladeCount = 11;
+            ctx.lineCap = "round";
+            for (let i = -bladeCount; i <= bladeCount; i++) {
+                let bx = (i / bladeCount) * (vw * 0.41);
+                let by = Math.sin(i * 1.7 + shape) * (patchH * 0.38);
+                let bh = patchH * (0.85 + (Math.abs(i * 3) % 3) * 0.25);
+
+                // 3 brins en éventail par touffe
+                ctx.strokeStyle = (i % 2 === 0) ? "#2e7d32" : "#78e08f";
+                ctx.lineWidth = Math.max(1.1, vw * 0.0055);
+                ctx.beginPath();
+                ctx.moveTo(bx, by);
+                ctx.quadraticCurveTo(bx - vw * 0.012, by - bh * 0.6, bx - vw * 0.022, by - bh);
+                ctx.moveTo(bx, by);
+                ctx.quadraticCurveTo(bx, by - bh * 0.7, bx + vw * 0.004, by - bh * 1.12);
+                ctx.moveTo(bx, by);
+                ctx.quadraticCurveTo(bx + vw * 0.012, by - bh * 0.6, bx + vw * 0.022, by - bh * 0.95);
+                ctx.stroke();
+            }
         }
 
         // --- FONCTION POUR DESSINER UN JOLI SKI DÉTAILLÉ (AVEC FLAMMES PENDANT LES FIGURES ET SUR LES RAMPES !) ---
@@ -2209,20 +2425,9 @@
                     } else if (item.type === "log") {
                         drawFallenLog(ctx, vw, vh);
                     } else if (item.type === "rock") {
-                        ctx.fillStyle = "rgba(0,0,0,0.22)";
-                        ctx.beginPath(); ctx.ellipse(0, 0, vw*0.45, vw*0.14, 0, 0, Math.PI*2); ctx.fill();
-                        ctx.fillStyle = "#607d8b"; ctx.beginPath();
-                        if (item.shape === 0) { ctx.moveTo(-vw/2,0); ctx.lineTo(-vw/3,-vh); ctx.lineTo(vw/3,-vh); ctx.lineTo(vw/2,0); }
-                        else if (item.shape === 1) { ctx.moveTo(-vw/2,0); ctx.lineTo(-vw/4,-vh*0.7); ctx.lineTo(0,-vh); ctx.lineTo(vw/3,-vh*0.6); ctx.lineTo(vw/2,0); }
-                        else { ctx.moveTo(-vw/2,0); ctx.lineTo(0,-vh); ctx.lineTo(vw/2,0); }
-                        ctx.fill();
+                        drawAlpineRock(ctx, vw, vh, item.shape);
                     } else if (item.type === "grass") {
-                        ctx.fillStyle = "#4caf50"; ctx.beginPath();
-                        if (item.shape === 0) { ctx.ellipse(0, 0, vw/2, vh*2, 0, 0, Math.PI*2); } 
-                        else if (item.shape === 1) { ctx.ellipse(-vw/4, 0, vw/3, vh*1.5, 0.1, 0, Math.PI*2); ctx.ellipse(vw/4, 0, vw/3, vh*1.5, -0.1, 0, Math.PI*2); } 
-                        else { ctx.moveTo(-vw/2, 0); ctx.quadraticCurveTo(0, -vh*3, vw/2, 0); ctx.quadraticCurveTo(0, vh*3, -vw/2, 0); }
-                        ctx.fill();
-                        ctx.fillStyle = "#2e7d32"; for(let i=-8; i<=8; i++) { ctx.fillRect(i*(vw/16), -vh, vw*0.01, vh*1.5); }
+                        drawAlpineGrassPatch(ctx, vw, vh, item.shape);
                     } else if (item.type === "animalCard" || item.type === "skyAnimalCard") {
                         // Dessin de l'item "Carte Animal" (🐾) inspiré du dos de carte Animal du site principal !
                         let bob = Math.sin(frames * 0.1 + item.z * 0.01) * (vh * 0.12);
@@ -2570,7 +2775,6 @@
                             tricksLanded++;
                             let bonus = player.onRampJump ? 200 : 150;
                             score += bonus;
-                            document.getElementById("trickCount").innerText = tricksLanded;
                         }
 
                         player.isDoingTrick = false;
@@ -2590,7 +2794,6 @@
 
             score += (currentSpeed / 10);
             document.getElementById("score").innerText = Math.floor(score);
-            document.getElementById("speedDisplay").innerText = Math.floor(currentSpeed * 2.2);
             
             handleObstacles();
         }
@@ -2600,6 +2803,7 @@
             document.getElementById("overlayTitle").innerText = reasonTitle || "PARTIE TERMINÉE";
             document.getElementById("overlayReason").innerText = reasonDetail || "Tu as chuté sur la piste et l'aigle t'a rattrapé !";
             document.getElementById("overlayScreen").style.display = "flex";
+            document.getElementById("pauseScreen").style.display = "none";
             document.getElementById("finalScore").innerText = Math.floor(score);
             const finalCardsEl = document.getElementById("finalCards");
             if (finalCardsEl) finalCardsEl.innerText = cardsCollected;
@@ -2609,8 +2813,6 @@
         function prepareGameWorld() {
             frames = 0; score = 0; groundScroll = 0; distSinceLastObstacle = 900; distSinceLastScenery = 0; grassTouches = 0; 
             tricksLanded = 0; cardsCollected = 0; groundCardSpawnedThisRun = false; trickTextPopups = [];
-            const cardEl = document.getElementById("cardCount");
-            if (cardEl) cardEl.innerText = "0";
             globalTargetSpeed = 24.5; currentSpeed = 24.5; landingBoostTimer = 0;
             currentCurve = 0; smoothCurve = 0; targetCurve = 0.75; curveLerpSpeed = 0.02; curveTimer = 85; bgScrollX = 0; cameraX = 0;
             obstacles = []; sideScenery = []; particles = []; windLines = []; skiTracks = [];
@@ -2648,8 +2850,6 @@
             eagle.x = 0; eagle.y = -595; eagle.z = 310; eagle.targetY = -595; eagle.targetZ = 310;
 
             document.getElementById("score").innerText = "0";
-            document.getElementById("speedDisplay").innerText = "54";
-            document.getElementById("trickCount").innerText = "0";
         }
 
         function initGame() {
@@ -2660,6 +2860,7 @@
             // CACHER TOUTES LES INTERFACES SUPERFLUES ET LANCER LA MUSIQUE DE FOND
             document.getElementById("overlayScreen").style.display = "none";
             document.getElementById("rulesScreen").style.display = "none";
+            document.getElementById("pauseScreen").style.display = "none";
             document.getElementById("videoContainer").style.display = "none";
             startBackgroundMusic();
         }
