@@ -198,8 +198,8 @@
             box-shadow: 0 4px 14px rgba(0,0,0,0.45); backdrop-filter: blur(4px);
         }
         #btnJump:active { background: rgba(46, 204, 113, 0.8); transform: scale(0.95); }
-        @media (max-width: 1024px), (pointer: coarse) { #touchControls { display: flex; } }
-        body.touch-device #touchControls { display: flex; }
+        @media (max-width: 1024px), (pointer: coarse) { body.is-playing #touchControls { display: flex; } }
+        body.touch-device.is-playing #touchControls { display: flex; }
 
         /* Écran de Pause épuré */
         #pauseScreen {
@@ -237,7 +237,7 @@
                 <h2 style="margin:0 0 10px 0; font-size:32px;">⛷️ La Marmotte Tout Schuss : Piste Noire</h2>
                 <p style="margin:0; color:#b8d8f4; font-size:16px;">Cinématique prête (fichier <code>intro marmotte.mp4</code>)</p>
             </div>
-            <button id="btnPlayIntroWithSound" onclick="playIntroWithSound()">🎬 Lancer l'introduction (avec son 🔊)</button>
+            <button id="btnPlayIntroWithSound" onclick="playIntroWithSound()">▶️ Play (passe en mode paysage 📱🔄)</button>
             <button class="btn-unmute-video" id="btnUnmuteVideo" onclick="unmuteIntroVideo()">🔊 Activer le son de la vidéo</button>
             <button class="btn-skip" onclick="skipVideo()">Passer la cinématique ➔</button>
         </div>
@@ -384,6 +384,14 @@
 
         function playIntroWithSound() {
             if (!introVideo) return;
+            // Passe directement en plein écran sur mobile dès le clic sur Play !
+            if (('ontouchstart' in window || navigator.maxTouchPoints > 0) && !document.fullscreenElement) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                }
+            }
             document.getElementById("btnPlayIntroWithSound").style.display = "none";
             document.getElementById("btnUnmuteVideo").style.display = "none";
             introVideo.muted = false;
@@ -393,9 +401,9 @@
 
         function startIntroSequence() {
             state = 'VIDEO';
+            document.body.classList.remove('is-playing');
             const vidCont = document.getElementById("videoContainer");
             const fallbackMsg = document.getElementById("videoFallbackMsg");
-            const unmuteBtn = document.getElementById("btnUnmuteVideo");
             const playWithSoundBtn = document.getElementById("btnPlayIntroWithSound");
             vidCont.style.display = "flex";
 
@@ -420,19 +428,10 @@
             });
             introVideo.onerror = () => { fallbackMsg.style.display = "block"; };
 
-            // Son activé de base à 100% pour la vidéo d'intro !
-            introVideo.muted = false;
-            introVideo.volume = 1.0;
-            let playPromise = introVideo.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(() => {
-                    // Si le navigateur bloque le son au chargement direct sans clic préalable,
-                    // on met la vidéo en pause au début avec un gros bouton central pour qu'elle démarre AVEC LE SON dès le clic !
-                    introVideo.pause();
-                    introVideo.currentTime = 0;
-                    playWithSoundBtn.style.display = "block";
-                });
-            }
+            // On met la vidéo en pause au début et on affiche le bouton Play "passe en mode paysage" !
+            introVideo.pause();
+            introVideo.currentTime = 0;
+            playWithSoundBtn.style.display = "block";
         }
 
         // --- IMAGES ---
@@ -2953,6 +2952,7 @@
         }
 
         function gameLoop() {
+            document.body.classList.toggle('is-playing', state === 'PLAY');
             if (state !== 'VIDEO') { // Dès que state = PLAY, on dessine en Haute Définition (1600x900)
                 frames++;
                 ctx.setTransform(canvas.width / LOGIC_W, 0, 0, canvas.height / LOGIC_H, 0, 0);
