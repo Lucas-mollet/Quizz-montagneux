@@ -75,34 +75,40 @@
         /* Fenêtre explicative des règles avant le début de la partie */
         #rulesScreen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(7, 19, 32, 0.82);
+            background: rgba(7, 19, 32, 0.88);
             display: none; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 90; backdrop-filter: blur(7px); padding: 20px;
+            z-index: 130; backdrop-filter: blur(7px); padding: 12px;
+            overflow-y: auto; touch-action: pan-y;
         }
         .rules-card {
-            max-width: 780px; width: 94%;
+            max-width: 780px; width: 96%; max-height: 94dvh;
+            display: flex; flex-direction: column;
             background: linear-gradient(160deg, rgba(16, 38, 62, 0.96), rgba(9, 24, 40, 0.98));
             border: 2px solid rgba(255, 255, 255, 0.25);
-            border-radius: 24px; padding: 28px 34px;
+            border-radius: 24px; padding: 24px 30px;
             box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
             color: #fff; text-align: left;
+            overflow: hidden;
         }
         .rules-card h2 {
-            margin: 0 0 16px 0; font-size: 30px; text-align: center;
+            margin: 0 0 14px 0; font-size: 28px; text-align: center;
             color: #ffd700; text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+            flex-shrink: 0;
         }
         .rules-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;
+            overflow-y: auto; padding-right: 4px; touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
         }
         .rule-item {
             background: rgba(255, 255, 255, 0.07);
             border: 1px solid rgba(255, 255, 255, 0.14);
-            border-radius: 14px; padding: 12px 15px; font-size: 14.5px; line-height: 1.42;
+            border-radius: 14px; padding: 12px 15px; font-size: 14.5px; line-height: 1.4;
         }
         .rule-item strong { color: #74b9ff; display: block; margin-bottom: 4px; font-size: 15.5px; }
         .rule-item.warn strong { color: #ff7675; }
         .rule-item.bonus strong { color: #ffeaa7; }
-        .rules-actions { text-align: center; }
+        .rules-actions { text-align: center; flex-shrink: 0; padding-top: 6px; }
         .btn-start-game {
             padding: 14px 36px; font-size: 19px; cursor: pointer;
             background: linear-gradient(135deg, #2ecc71, #27ae60); color: white;
@@ -111,8 +117,19 @@
             transition: 0.2s;
         }
         .btn-start-game:hover { transform: scale(1.04); background: #2ecc71; border-color: #fff; }
-        @media (max-width: 720px) { .rules-grid { grid-template-columns: 1fr; } }
 
+        /* Adaptation Mobile Portrait & Paysage : tout rentre à l'écran et le bouton reste toujours visible ! */
+        @media (max-width: 760px), (max-height: 620px) {
+            .rules-card { padding: 14px 16px; border-radius: 18px; max-height: 92dvh; }
+            .rules-card h2 { font-size: 19px; margin-bottom: 10px; }
+            .rules-grid { gap: 8px; margin-bottom: 10px; }
+            .rule-item { padding: 8px 10px; font-size: 12px; line-height: 1.3; border-radius: 10px; }
+            .rule-item strong { font-size: 13px; margin-bottom: 2px; }
+            .btn-start-game { padding: 10px 26px; font-size: 16px; width: 100%; max-width: 320px; }
+        }
+        @media (max-width: 540px) and (orientation: portrait) {
+            .rules-grid { grid-template-columns: 1fr; }
+        }
         /* Bouton central si le navigateur demande un clic pour lancer la vidéo avec le son */
         #btnPlayIntroWithSound {
             position: absolute; padding: 18px 34px; font-size: 20px; font-weight: 800;
