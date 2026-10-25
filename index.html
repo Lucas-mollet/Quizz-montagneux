@@ -265,7 +265,7 @@
 
             <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 20px;">
                 <button class="btn-start" style="margin: 0; width: auto; padding: 13px 26px; background: #2e7d32;" onclick="lancerJeuMarmotte()">▶️ Lancer le jeu ici</button>
-                <a href="marmotte.html" class="btn-start" style="margin: 0; width: auto; padding: 13px 26px; background: #1976d2; text-decoration: none; display: inline-block;">⛶ Ouvrir en grand écran</a>
+                <a href="marmotte.html" onclick="this.href='marmotte.html?v='+Date.now()" class="btn-start" style="margin: 0; width: auto; padding: 13px 26px; background: #1976d2; text-decoration: none; display: inline-block;">⛶ Ouvrir en grand écran</a>
                 <button class="btn-start" style="margin: 0; width: auto; padding: 13px 26px; background: #e53935;" onclick="decouvrirAnimal()">🐾 Découvrir un animal (<span id="count-animaux-bonus">0</span>)</button>
             </div>
 
@@ -603,7 +603,7 @@
             const wrapper = document.getElementById("marmotte-game-wrapper");
             const iframe = document.getElementById("marmotte-iframe");
             wrapper.classList.remove("hidden");
-            iframe.src = "marmotte.html";
+            iframe.src = "marmotte.html?v=" + Date.now();
             iframe.focus();
         }
 
