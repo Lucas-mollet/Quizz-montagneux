@@ -7,53 +7,54 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f9f4; color: #333; margin: 0; padding: 0; }
         
-        /* --- HEADER ORNEMENTÉ OR & ÉPURÉ --- */
+        /* --- HEADER ORNEMENTÉ OR & ÉPURÉ (CADRE DORÉ AGRANDI) --- */
         header {
             background: linear-gradient(180deg, #163d18 0%, #245828 50%, #163d18 100%);
             color: #fdfbf7;
-            padding: 26px 20px;
+            padding: 10px 14px;
             text-align: center;
             position: relative;
             border-bottom: 3px solid #d4af37;
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
         }
         .header-frame {
-            max-width: 820px;
+            max-width: 98%;
             margin: 0 auto;
-            padding: 18px 30px;
-            border: 1px solid rgba(212, 175, 55, 0.65);
+            padding: 24px 30px;
+            border: 2px solid rgba(212, 175, 55, 0.8);
             position: relative;
             background: rgba(0, 0, 0, 0.12);
+            box-sizing: border-box;
         }
-        .header-frame::before, .header-frame::after {
+        .header-frame::before {
             content: "";
             position: absolute;
-            inset: 5px;
-            border: 1px solid rgba(212, 175, 55, 0.28);
+            inset: 6px;
+            border: 1px solid rgba(212, 175, 55, 0.38);
             pointer-events: none;
         }
         .header-ornament {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 14px;
+            gap: 16px;
             color: #d4af37;
-            font-size: 13px;
+            font-size: 14px;
             letter-spacing: 5px;
             margin: 4px 0;
-            opacity: 0.9;
+            opacity: 0.95;
         }
         .header-ornament::before, .header-ornament::after {
             content: "";
-            width: 70px;
+            width: 110px;
             height: 1px;
             background: linear-gradient(90deg, transparent, #d4af37, transparent);
         }
         header h1 {
             font-family: 'Georgia', 'Times New Roman', serif;
-            font-size: 32px;
+            font-size: 34px;
             font-weight: normal;
-            letter-spacing: 3px;
+            letter-spacing: 3.5px;
             text-transform: uppercase;
             margin: 8px 0 6px 0;
             color: #fffdf7;
@@ -61,16 +62,101 @@
         }
         header p {
             margin: 0 0 4px 0;
-            font-size: 14px;
+            font-size: 15px;
             letter-spacing: 1.5px;
             color: #e6dec8;
             font-style: italic;
         }
         
-        /* --- NAVIGATION --- */
-        nav { display: flex; justify-content: center; background: #123314; padding: 10px; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); }
-        nav button { position: relative; background: none; border: 1px solid transparent; color: #f0f4f0; font-size: 15px; font-weight: bold; cursor: pointer; padding: 10px 16px; border-radius: 6px; transition: 0.3s; }
-        nav button:hover, nav button.active { background: #2e7d32; border-color: rgba(212, 175, 55, 0.5); color: #fff; }
+        /* --- NAVIGATION PRINCIPALE ESPACÉE & MENU DÉROULANT BONUS --- */
+        nav.main-nav {
+            display: flex;
+            justify-content: space-evenly;
+            align-items: center;
+            background: #123314;
+            padding: 12px 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+        }
+        nav.main-nav button {
+            position: relative;
+            background: none;
+            border: 1px solid transparent;
+            color: #f0f4f0;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 10px 22px;
+            border-radius: 6px;
+            transition: 0.25s;
+        }
+        nav.main-nav button:hover, nav.main-nav button.active {
+            background: #2e7d32;
+            border-color: rgba(212, 175, 55, 0.65);
+            color: #ffffff;
+        }
+
+        /* Conteneur déroulant pour Jouer -> Bonus */
+        .nav-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding-top: 6px;
+            z-index: 200;
+            min-width: 170px;
+        }
+        .dropdown-content button {
+            width: 100%;
+            background: #163d18 !important;
+            border: 1px solid #d4af37 !important;
+            color: #fffdf7 !important;
+            padding: 10px 16px !important;
+            border-radius: 6px !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            white-space: nowrap;
+            font-size: 15px !important;
+        }
+        .dropdown-content button:hover {
+            background: #2e7d32 !important;
+        }
+        .nav-dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        /* --- SOUS-NAVIGATION (INVENTAIRE & MARCHÉ) LISIBLE --- */
+        .subnav {
+            display: flex;
+            justify-content: center;
+            background: transparent;
+            border-bottom: 2px solid #d7ebd8;
+            margin-bottom: 22px;
+            padding: 0 0 10px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .subnav button {
+            background: white;
+            border: 2px solid #2e7d32;
+            color: #2e7d32;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 10px 18px;
+            border-radius: 8px;
+            transition: 0.25s;
+        }
+        .subnav button:hover, .subnav button.active {
+            background: #2e7d32 !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 10px rgba(46, 125, 50, 0.25);
+        }
         
         .nav-badge { position: absolute; top: -5px; right: -5px; background: #e53935; color: white; font-size: 12px; font-weight: bold; padding: 3px 7px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); border: 2px solid #1b5e20; }
         
@@ -83,11 +169,13 @@
         .welcome-box h2 { color: #2e7d32; border-bottom: 2px solid #e8f5e9; padding-bottom: 12px; margin-top: 0; font-size: 28px; font-family: 'Georgia', serif; }
         .welcome-text { font-size: 18px; color: #444; max-width: 650px; margin: 20px auto; }
         .btn-start { display: block; width: 220px; margin: 30px auto 0; padding: 15px; background: #2e7d32; color: white; border: 1px solid #d4af37; border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
-        .btn-start:hover { background: #1b5e20; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.22); }
+        .btn-start:hover:not(:disabled) { background: #1b5e20; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.22); }
+        .btn-start:disabled { opacity: 0.55; cursor: not-allowed; }
 
         /* --- HUD --- */
         .stats-bar { display: flex; justify-content: space-around; align-items: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; font-weight: bold; color: #2e7d32; font-size: 16px; flex-wrap: wrap; gap: 10px; border-top: 3px solid #d4af37; }
         .progress-text { display: block; font-size: 13px; font-weight: normal; color: #555; margin-top: 4px; }
+        .coin-display { color: #d4af37; display: flex; align-items: center; gap: 5px; font-size: 19px; }
         .gold-display { color: #f9a825; display: flex; align-items: center; gap: 5px; font-size: 20px;}
         .elo-display { color: #9c27b0; display: flex; align-items: center; gap: 5px; font-size: 18px;}
 
@@ -168,7 +256,6 @@
             transition: box-shadow 0.45s ease, border-color 0.45s ease, transform 0.3s ease;
             overflow: hidden;
         }
-        /* Reflet métallique traversant le dos de la carte */
         .front::after {
             content: "";
             position: absolute;
@@ -220,7 +307,6 @@
             box-sizing: border-box;
             box-shadow: inset 0 0 0 4px rgba(0, 0, 0, 0.35), inset 0 0 0 5px rgba(212, 175, 55, 0.35);
         }
-        /* Ornements d'angle ciselés */
         .corner-ornament {
             position: absolute;
             width: 22px;
@@ -249,7 +335,6 @@
             padding-bottom: 0;
             padding-top: 4px;
         }
-        /* Médaillon central géométrique */
         .card-medallion {
             width: 115px;
             height: 115px;
@@ -396,13 +481,17 @@
         </div>
     </header>
 
-    <nav>
+    <nav class="main-nav">
         <button id="nav-accueil" class="active" onclick="switchTab('accueil')">🏠 Accueil</button>
-        <button id="nav-qcm" onclick="switchTab('qcm')">🎮 Jouer</button>
         <button id="nav-inventaire" onclick="switchTab('inventaire')">🎒 Inventaire <span id="inventaire-badge" class="nav-badge hidden">0</span></button>
+        <div class="nav-dropdown">
+            <button id="nav-qcm" onclick="switchTab('qcm')">🎮 Jouer ▾</button>
+            <div class="dropdown-content">
+                <button id="nav-bonus" onclick="switchTab('bonus')">🎁 Bonus</button>
+            </div>
+        </div>
         <button id="nav-marche" onclick="switchTab('marche')">⛺ Marché</button>
         <button id="nav-statistiques" onclick="switchTab('statistiques')">📊 Stats</button>
-        <button id="nav-bonus" onclick="switchTab('bonus')">🎁 Bonus</button>
     </nav>
 
     <div id="section-accueil" class="container">
@@ -417,10 +506,10 @@
     <div id="section-qcm" class="container hidden">
         <div class="stats-bar">
             <div style="text-align: center;">⭐ Niveau : <span id="niveau-joueur">0</span><br><span class="progress-text">(Niv. Suivant : <span id="niveau-progress">0</span> / 5)</span></div>
-            <div style="text-align: center;">🐾 Animal<br><span class="progress-text">(Prochain : <span id="animal-progress">0</span> / 3)</span></div>
-            <div style="text-align: center;">🔥 Série<br><span class="progress-text"><span id="streak-counter">0</span> / 3</span></div>
+            <div style="text-align: center;">🔥 Série<br><span class="progress-text"><span id="streak-counter">0</span> / 2</span></div>
+            <div class="coin-display" style="text-align: center;" title="Pièces d'or pour retourner des cartes dans l'inventaire">🪙 <span id="coins-hud">0</span></div>
             <div class="elo-display" style="text-align: center;">🏆 <span id="elo-hud-top">1000</span></div>
-            <div class="gold-display" style="text-align: center;">🪨 <span id="gold-hud">0</span></div>
+            <div class="gold-display" style="text-align: center;" title="Pierres de troc pour le Marché">🪨 <span id="gold-hud">0</span></div>
         </div>
         <div class="question-box">
             <img id="question-img" class="question-img hidden" src="" alt="Espèce à reconnaître">
@@ -431,35 +520,40 @@
     </div>
 
     <div id="section-inventaire" class="container hidden">
-        <nav style="background:transparent; border-bottom: 2px solid #e8f5e9; margin-bottom: 20px; padding:0;">
-            <button id="subnav-plantes" class="active" onclick="switchSubTabInventaire('plantes')" style="color:#2e7d32; border-bottom: 2px solid transparent;">🌸 Fleurs (<span id="count-plantes-trouvees">0/0</span>)</button>
-            <button id="subnav-animaux" onclick="switchSubTabInventaire('animaux')" style="color:#2e7d32; border-bottom: 2px solid transparent;">🐾 Animaux (<span id="count-animaux-trouves">0/0</span>)</button>
-            <button id="subnav-champignons" onclick="switchSubTabInventaire('champignons')" style="color:#2e7d32; border-bottom: 2px solid transparent;">🍄 Champignons (<span id="count-champignons-trouves">0/0</span>)</button>
-            <button id="subnav-arbres" onclick="switchSubTabInventaire('arbres')" style="color:#2e7d32; border-bottom: 2px solid transparent;">🌲 Arbres (<span id="count-arbres-trouves">0/0</span>)</button>
+        <div class="stats-bar" style="margin-bottom: 18px;">
+            <div style="font-size: 18px;">Pièces d'or disponibles : <span style="color:#d4af37; font-size: 22px;">🪙 <span id="coins-inventaire">0</span></span></div>
+            <div style="font-size: 13px; color: #666; font-weight: normal;">(Gagnez 1 🪙 toutes les 2 bonnes réponses d'affilée !)</div>
+        </div>
+
+        <nav class="subnav">
+            <button id="subnav-plantes" class="active" onclick="switchSubTabInventaire('plantes')">🌸 Fleurs (<span id="count-plantes-trouvees">0/0</span>)</button>
+            <button id="subnav-arbres" onclick="switchSubTabInventaire('arbres')">🌲 Arbres (<span id="count-arbres-trouves">0/0</span>)</button>
+            <button id="subnav-champignons" onclick="switchSubTabInventaire('champignons')">🍄 Champignons (<span id="count-champignons-trouves">0/0</span>)</button>
+            <button id="subnav-animaux" onclick="switchSubTabInventaire('animaux')">🐾 Animaux (<span id="count-animaux-trouves">0/0</span>)</button>
         </nav>
         
         <div id="view-plantes">
-            <button id="btn-planter" class="btn-start" style="margin-bottom:20px; width:auto;" onclick="planterGraine()">🌱 Planter une graine (<span id="count-graines-planter">0</span>)</button>
+            <button id="btn-planter" class="btn-start" style="margin-bottom:20px; width:auto; padding: 14px 28px;" onclick="planterGraine()">🌸 Retourner une carte Fleur (Coût : 1 🪙 — Dispo : <span id="count-graines-planter">0</span>)</button>
             <div id="grid-plantes" class="grid"></div>
         </div>
-        <div id="view-animaux" class="hidden">
-            <button id="btn-decouvrir" class="btn-start" style="margin-bottom:20px; width:auto; background:#e53935;" onclick="decouvrirAnimal()">🐾 Découvrir un animal (<span id="count-animaux-decouvrir">0</span>)</button>
-            <div id="grid-animaux" class="grid"></div>
+        <div id="view-arbres" class="hidden">
+            <button id="btn-observer-arbre" class="btn-start" style="margin-bottom:20px; width:auto; padding: 14px 28px; background:#00796b;" onclick="observerArbre()">🌲 Retourner une carte Arbre (Coût : 1 🪙 — Dispo : <span id="count-arbres-observer">0</span>)</button>
+            <div id="grid-arbres" class="grid"></div>
         </div>
         <div id="view-champignons" class="hidden">
-            <button id="btn-cueillir" class="btn-start" style="margin-bottom:20px; width:auto; background:#8d6e63;" onclick="cueillirChampignon()">🍄 Cueillir un champignon (<span id="count-champignons-cueillir">0</span>)</button>
+            <button id="btn-cueillir" class="btn-start" style="margin-bottom:20px; width:auto; padding: 14px 28px; background:#8d6e63;" onclick="cueillirChampignon()">🍄 Retourner une carte Champignon (Coût : 2 🪙 — Dispo : <span id="count-champignons-cueillir">0</span>)</button>
             <div id="grid-champignons" class="grid"></div>
         </div>
-        <div id="view-arbres" class="hidden">
-            <button id="btn-observer-arbre" class="btn-start" style="margin-bottom:20px; width:auto; background:#00796b;" onclick="observerArbre()">🌲 Observer un arbre (<span id="count-arbres-observer">0</span>)</button>
-            <div id="grid-arbres" class="grid"></div>
+        <div id="view-animaux" class="hidden">
+            <button id="btn-decouvrir" class="btn-start" style="margin-bottom:20px; width:auto; padding: 14px 28px; background:#e53935;" onclick="decouvrirAnimal()">🐾 Retourner une carte Animal (Coût : 3 🪙 — Dispo : <span id="count-animaux-decouvrir">0</span>)</button>
+            <div id="grid-animaux" class="grid"></div>
         </div>
     </div>
 
     <div id="section-marche" class="container hidden">
-        <nav style="background:transparent; border-bottom: 2px solid #e8f5e9; margin-bottom: 20px; padding:0;">
-            <button id="subnav-tresorerie" class="active" onclick="switchSubTabMarche('tresorerie')" style="color:#2e7d32; border-bottom: 2px solid transparent;">🪨 Trésorerie</button>
-            <button id="subnav-laboratoire" onclick="switchSubTabMarche('laboratoire')" style="color:#2e7d32; border-bottom: 2px solid transparent;">⚗️ Laboratoire</button>
+        <nav class="subnav">
+            <button id="subnav-tresorerie" class="active" onclick="switchSubTabMarche('tresorerie')">🪨 Trésorerie</button>
+            <button id="subnav-laboratoire" onclick="switchSubTabMarche('laboratoire')">⚗️ Laboratoire</button>
         </nav>
         
         <div id="panel-tresorerie">
@@ -468,7 +562,7 @@
             </div>
 
             <div id="bag-container" class="sac-box hidden">
-                <div><h3 style="margin:0; color:#333;">🎒 Sac d'expédition (Niveau)</h3><p style="margin:5px 0 0 0; font-size:14px; font-weight:bold; color:#555;">Contient 2 fleurs, 1 animal, 1 champignon et 1 arbre !</p></div>
+                <div><h3 style="margin:0; color:#333;">🎒 Sac d'expédition (Niveau)</h3><p style="margin:5px 0 0 0; font-size:14px; font-weight:bold; color:#555;">Contient 2 fleurs, 1 arbre, 1 champignon et 1 animal !</p></div>
                 <button class="btn-sac" onclick="openBag()">Ouvrir (<span id="count-sacs">0</span>)</button>
             </div>
 
@@ -488,18 +582,18 @@
                     <div class="shop-item legendaire" onclick="buyCard('plante', 'Legendaire', 30)">
                         <span class="shop-rarity">🌸 Légendaire</span><span class="shop-price">🪨 30</span>
                     </div>
-                    <!-- Animaux -->
-                    <div class="shop-item commune" onclick="buyCard('animal', 'Commune', 10)">
-                        <span class="shop-rarity">🐾 Commune</span><span class="shop-price">🪨 10</span>
+                    <!-- Arbres -->
+                    <div class="shop-item commune" onclick="buyCard('arbre', 'Commune', 5)">
+                        <span class="shop-rarity">🌲 Commune</span><span class="shop-price">🪨 5</span>
                     </div>
-                    <div class="shop-item rare" onclick="buyCard('animal', 'Rare', 20)">
-                        <span class="shop-rarity">🐾 Rare</span><span class="shop-price">🪨 20</span>
+                    <div class="shop-item rare" onclick="buyCard('arbre', 'Rare', 12)">
+                        <span class="shop-rarity">🌲 Rare</span><span class="shop-price">🪨 12</span>
                     </div>
-                    <div class="shop-item epique" onclick="buyCard('animal', 'Epique', 30)">
-                        <span class="shop-rarity">🐾 Épique</span><span class="shop-price">🪨 30</span>
+                    <div class="shop-item epique" onclick="buyCard('arbre', 'Epique', 22)">
+                        <span class="shop-rarity">🌲 Épique</span><span class="shop-price">🪨 22</span>
                     </div>
-                    <div class="shop-item legendaire" onclick="buyCard('animal', 'Legendaire', 45)">
-                        <span class="shop-rarity">🐾 Légendaire</span><span class="shop-price">🪨 45</span>
+                    <div class="shop-item legendaire" onclick="buyCard('arbre', 'Legendaire', 35)">
+                        <span class="shop-rarity">🌲 Légendaire</span><span class="shop-price">🪨 35</span>
                     </div>
                     <!-- Champignons -->
                     <div class="shop-item commune" onclick="buyCard('champignon', 'Commune', 5)">
@@ -514,23 +608,23 @@
                     <div class="shop-item legendaire" onclick="buyCard('champignon', 'Legendaire', 35)">
                         <span class="shop-rarity">🍄 Légendaire</span><span class="shop-price">🪨 35</span>
                     </div>
-                    <!-- Arbres -->
-                    <div class="shop-item commune" onclick="buyCard('arbre', 'Commune', 5)">
-                        <span class="shop-rarity">🌲 Commune</span><span class="shop-price">🪨 5</span>
+                    <!-- Animaux -->
+                    <div class="shop-item commune" onclick="buyCard('animal', 'Commune', 10)">
+                        <span class="shop-rarity">🐾 Commune</span><span class="shop-price">🪨 10</span>
                     </div>
-                    <div class="shop-item rare" onclick="buyCard('arbre', 'Rare', 12)">
-                        <span class="shop-rarity">🌲 Rare</span><span class="shop-price">🪨 12</span>
+                    <div class="shop-item rare" onclick="buyCard('animal', 'Rare', 20)">
+                        <span class="shop-rarity">🐾 Rare</span><span class="shop-price">🪨 20</span>
                     </div>
-                    <div class="shop-item epique" onclick="buyCard('arbre', 'Epique', 22)">
-                        <span class="shop-rarity">🌲 Épique</span><span class="shop-price">🪨 22</span>
+                    <div class="shop-item epique" onclick="buyCard('animal', 'Epique', 30)">
+                        <span class="shop-rarity">🐾 Épique</span><span class="shop-price">🪨 30</span>
                     </div>
-                    <div class="shop-item legendaire" onclick="buyCard('arbre', 'Legendaire', 35)">
-                        <span class="shop-rarity">🌲 Légendaire</span><span class="shop-price">🪨 35</span>
+                    <div class="shop-item legendaire" onclick="buyCard('animal', 'Legendaire', 45)">
+                        <span class="shop-rarity">🐾 Légendaire</span><span class="shop-price">🪨 45</span>
                     </div>
                     
                     <div class="shop-item shop-item-sac" onclick="buyBag(25)">
                         <span class="shop-rarity" style="color:#333;">🎒 Sac d'expédition (Boutique)</span>
-                        <p style="margin:5px 0 0 0; font-size:12px; color:#555;">Contient 2 fleurs, 1 animal, 1 champignon et 1 arbre !</p>
+                        <p style="margin:5px 0 0 0; font-size:12px; color:#555;">Contient 2 fleurs, 1 arbre, 1 champignon et 1 animal !</p>
                         <span class="shop-price" style="color:#333;">🪨 25</span>
                     </div>
                 </div>
@@ -602,8 +696,14 @@
         let pierresJoueur = 0; 
         let eloJoueur = 1000;
         let streak = 0;
-        let grainesGagnees = 0, grainesPlantees = 0, animauxTires = 0, champignonsTires = 0, arbresTires = 0, sacsOuverts = 0;
+
+        // Système de Pièces d'or (1 pièce gagnée toutes les 2 bonnes réponses d'affilée)
+        // Coûts de retournement : Fleur = 1, Arbre = 1, Champignon = 2, Animal = 3
+        let piecesOrGagnees = 0;
+        let piecesOrDepensees = 0;
+        let sacsOuverts = 0;
         let bonusAnimauxGagnes = 0;
+        let bonusAnimauxUtilises = 0;
         
         let rewardTypePending = ""; 
         let pendingSpecies = null;
@@ -635,26 +735,27 @@
             inventaireJoueur = JSON.parse(localStorage.getItem("inventaire")) || [];
             pierresJoueur = JSON.parse(localStorage.getItem("pierresJoueur")) || JSON.parse(localStorage.getItem("orJoueur")) || 0;
             eloJoueur = JSON.parse(localStorage.getItem("eloJoueur")) || 1000;
-            grainesGagnees = JSON.parse(localStorage.getItem("grainesGagnees")) || 0;
-            grainesPlantees = JSON.parse(localStorage.getItem("grainesPlantees")) || 0;
-            animauxTires = JSON.parse(localStorage.getItem("animauxTires")) || 0;
-            champignonsTires = JSON.parse(localStorage.getItem("champignonsTires")) || 0;
-            arbresTires = JSON.parse(localStorage.getItem("arbresTires")) || 0;
+            
+            // Rétrocompatibilité avec les anciennes sauvegardes (grainesGagnees / grainesPlantees)
+            const oldGraines = JSON.parse(localStorage.getItem("grainesGagnees")) || 0;
+            const oldPlantees = JSON.parse(localStorage.getItem("grainesPlantees")) || 0;
+            piecesOrGagnees = JSON.parse(localStorage.getItem("piecesOrGagnees")) ?? oldGraines;
+            piecesOrDepensees = JSON.parse(localStorage.getItem("piecesOrDepensees")) ?? oldPlantees;
+            
             sacsOuverts = JSON.parse(localStorage.getItem("sacsOuverts")) || 0;
             bonusAnimauxGagnes = parseInt(localStorage.getItem("bonusAnimauxGagnes")) || 0;
+            bonusAnimauxUtilises = parseInt(localStorage.getItem("bonusAnimauxUtilises")) || 0;
         } catch (e) {}
 
         function sauvegarderProgression() {
             localStorage.setItem("inventaire", JSON.stringify(inventaireJoueur));
             localStorage.setItem("pierresJoueur", pierresJoueur); 
             localStorage.setItem("eloJoueur", eloJoueur); 
-            localStorage.setItem("grainesGagnees", grainesGagnees);
-            localStorage.setItem("grainesPlantees", grainesPlantees);
-            localStorage.setItem("animauxTires", animauxTires);
-            localStorage.setItem("champignonsTires", champignonsTires);
-            localStorage.setItem("arbresTires", arbresTires);
+            localStorage.setItem("piecesOrGagnees", piecesOrGagnees);
+            localStorage.setItem("piecesOrDepensees", piecesOrDepensees);
             localStorage.setItem("sacsOuverts", sacsOuverts);
             localStorage.setItem("bonusAnimauxGagnes", bonusAnimauxGagnes);
+            localStorage.setItem("bonusAnimauxUtilises", bonusAnimauxUtilises);
         }
 
         window.addEventListener("message", (e) => {
@@ -721,42 +822,54 @@
             return "Roi floral";
         }
 
+        function getPiecesDisponibles() {
+            return Math.max(0, piecesOrGagnees - piecesOrDepensees);
+        }
+
         function updateHUD() {
             bonusAnimauxGagnes = parseInt(localStorage.getItem("bonusAnimauxGagnes")) || 0;
-            const niv = Math.floor(grainesGagnees / 5);
-            const animauxGagnes = Math.floor(grainesGagnees / 3) + bonusAnimauxGagnes;
-            const champignonsGagnes = Math.floor(grainesGagnees / 2);
-            const arbresGagnes = Math.floor(grainesGagnees / 4);
+            const niv = Math.floor(piecesOrGagnees / 5);
+            const piecesDispo = getPiecesDisponibles();
+            const bonusDispo = Math.max(0, bonusAnimauxGagnes - bonusAnimauxUtilises);
             
             document.getElementById("niveau-joueur").innerText = niv;
-            document.getElementById("niveau-progress").innerText = grainesGagnees % 5;
+            document.getElementById("niveau-progress").innerText = piecesOrGagnees % 5;
             document.getElementById("stat-niveau").innerText = niv;
             document.getElementById("stat-grade").innerText = getGrade(niv);
             
-            document.getElementById("animal-progress").innerText = grainesGagnees % 3;
             document.getElementById("streak-counter").innerText = streak;
             
+            document.getElementById("coins-hud").innerText = piecesDispo;
+            document.getElementById("coins-inventaire").innerText = piecesDispo;
+
             document.getElementById("gold-hud").innerText = pierresJoueur;
             document.getElementById("gold-tresor").innerText = pierresJoueur;
             
             document.getElementById("elo-hud-top").innerText = eloJoueur;
             document.getElementById("elo-hud-stats").innerText = eloJoueur;
             
-            const gAttente = Math.max(0, grainesGagnees - grainesPlantees);
-            const aAttente = Math.max(0, animauxGagnes - animauxTires);
-            const cAttente = Math.max(0, champignonsGagnes - champignonsTires);
-            const tAttente = Math.max(0, arbresGagnes - arbresTires);
+            // Nombre de tirages possibles selon les pièces d'or disponibles :
+            // Fleur = 1 pièce, Arbre = 1 pièce, Champignon = 2 pièces, Animal = 3 pièces (+ bonus Marmotte)
+            const gAttente = piecesDispo;
+            const tAttente = piecesDispo;
+            const cAttente = Math.floor(piecesDispo / 2);
+            const aAttente = Math.floor(piecesDispo / 3) + bonusDispo;
             const sAttente = Math.max(0, Math.floor(niv / 5) - sacsOuverts); 
             
             document.getElementById("count-graines-planter").innerText = gAttente;
-            document.getElementById("count-animaux-decouvrir").innerText = aAttente;
-            document.getElementById("count-champignons-cueillir").innerText = cAttente;
             document.getElementById("count-arbres-observer").innerText = tAttente;
+            document.getElementById("count-champignons-cueillir").innerText = cAttente;
+            document.getElementById("count-animaux-decouvrir").innerText = aAttente;
             document.getElementById("count-sacs").innerText = sAttente;
             document.getElementById("bag-container").classList.toggle("hidden", sAttente <= 0);
+
+            document.getElementById("btn-planter").disabled = (gAttente <= 0);
+            document.getElementById("btn-observer-arbre").disabled = (tAttente <= 0);
+            document.getElementById("btn-cueillir").disabled = (cAttente <= 0);
+            document.getElementById("btn-decouvrir").disabled = (aAttente <= 0);
             
             const badge = document.getElementById("inventaire-badge");
-            const tot = gAttente + aAttente + cAttente + tAttente + sAttente;
+            const tot = piecesDispo + bonusDispo + sAttente;
             badge.innerText = tot; badge.classList.toggle("hidden", tot <= 0);
 
             const idsP = [...fauneEtFlore.plantes.map(p=>p.id), ...recettes.filter(r=>r.type==='plante' && inventaireJoueur.includes(r.id)).map(r=>r.id)];
@@ -800,14 +913,18 @@
                         b.classList.add("success-answer"); 
                         streak++;
                         eloJoueur += 15;
-                        if(streak>=3){ streak=0; grainesGagnees++; }
+                        // 2 bonnes réponses d'affilée = 1 pièce d'or dans l'inventaire !
+                        if(streak >= 2){
+                            streak = 0;
+                            piecesOrGagnees++;
+                        }
                         sauvegarderProgression();
                         setTimeout(loadQuestion, 1200);
                     } else {
                         b.classList.add("wrong-answer");
                         const rightBtn = [...all].find(x => parseInt(x.dataset.idx) === q.correct);
                         if (rightBtn) rightBtn.classList.add("correct-answer");
-                        streak=0;
+                        streak = 0;
                         eloJoueur = Math.max(0, eloJoueur - 10);
                         sauvegarderProgression();
                         setTimeout(loadQuestion, 2500);
@@ -966,40 +1083,56 @@
             pierresJoueur -= price;
             sauvegarderProgression();
             updateHUD();
-            rewardQueue = [{type:'plante'}, {type:'plante'}, {type:'animal'}, {type:'champignon'}, {type:'arbre'}];
+            rewardQueue = [{type:'plante'}, {type:'plante'}, {type:'arbre'}, {type:'champignon'}, {type:'animal'}];
             closeReward(); 
         }
 
         function openBag() {
-            const niv = Math.floor(grainesGagnees / 5);
+            const niv = Math.floor(piecesOrGagnees / 5);
             if (Math.floor(niv / 5) > sacsOuverts) {
                 sacsOuverts++;
-                rewardQueue = [{type:'plante'}, {type:'plante'}, {type:'animal'}, {type:'champignon'}, {type:'arbre'}];
+                rewardQueue = [{type:'plante'}, {type:'plante'}, {type:'arbre'}, {type:'champignon'}, {type:'animal'}];
                 sauvegarderProgression(); closeReward();
             }
         }
 
-        function planterGraine() { if(grainesGagnees > grainesPlantees){ grainesPlantees++; sauvegarderProgression(); triggerReward('plante'); } }
-        function decouvrirAnimal() {
-            bonusAnimauxGagnes = parseInt(localStorage.getItem("bonusAnimauxGagnes")) || 0;
-            if ((Math.floor(grainesGagnees / 3) + bonusAnimauxGagnes) > animauxTires) {
-                animauxTires++;
+        // Retourner une carte dans l'Inventaire (Fleur = 1 🪙, Arbre = 1 🪙, Champignon = 2 🪙, Animal = 3 🪙)
+        function planterGraine() {
+            if (getPiecesDisponibles() >= 1) {
+                piecesOrDepensees += 1;
                 sauvegarderProgression();
-                triggerReward('animal');
-            }
-        }
-        function cueillirChampignon() {
-            if (Math.floor(grainesGagnees / 2) > champignonsTires) {
-                champignonsTires++;
-                sauvegarderProgression();
-                triggerReward('champignon');
+                updateHUD();
+                triggerReward('plante');
             }
         }
         function observerArbre() {
-            if (Math.floor(grainesGagnees / 4) > arbresTires) {
-                arbresTires++;
+            if (getPiecesDisponibles() >= 1) {
+                piecesOrDepensees += 1;
                 sauvegarderProgression();
+                updateHUD();
                 triggerReward('arbre');
+            }
+        }
+        function cueillirChampignon() {
+            if (getPiecesDisponibles() >= 2) {
+                piecesOrDepensees += 2;
+                sauvegarderProgression();
+                updateHUD();
+                triggerReward('champignon');
+            }
+        }
+        function decouvrirAnimal() {
+            bonusAnimauxGagnes = parseInt(localStorage.getItem("bonusAnimauxGagnes")) || 0;
+            if (bonusAnimauxGagnes > bonusAnimauxUtilises) {
+                bonusAnimauxUtilises++;
+                sauvegarderProgression();
+                updateHUD();
+                triggerReward('animal');
+            } else if (getPiecesDisponibles() >= 3) {
+                piecesOrDepensees += 3;
+                sauvegarderProgression();
+                updateHUD();
+                triggerReward('animal');
             }
         }
 
@@ -1017,10 +1150,10 @@
 
         function renderInventory() {
             const gp = document.getElementById("grid-plantes"),
-                  ga = document.getElementById("grid-animaux"),
+                  gt = document.getElementById("grid-arbres"),
                   gc = document.getElementById("grid-champignons"),
-                  gt = document.getElementById("grid-arbres");
-            gp.innerHTML = ""; ga.innerHTML = ""; gc.innerHTML = ""; gt.innerHTML = "";
+                  ga = document.getElementById("grid-animaux");
+            gp.innerHTML = ""; gt.innerHTML = ""; gc.innerHTML = ""; ga.innerHTML = "";
 
             const toutesPlantes = [...fauneEtFlore.plantes, ...recettes.filter(r => r.type === 'plante' && inventaireJoueur.includes(r.id))];
             const tousAnimaux = [...fauneEtFlore.animaux, ...recettes.filter(r => r.type === 'animal' && inventaireJoueur.includes(r.id))];
@@ -1029,17 +1162,17 @@
                 const c = inventaireJoueur.filter(id => id === s.id).length;
                 gp.innerHTML += buildCardHTML(s, c===0, c);
             });
-            tousAnimaux.forEach(s => {
+            fauneEtFlore.arbres.forEach(s => {
                 const c = inventaireJoueur.filter(id => id === s.id).length;
-                ga.innerHTML += buildCardHTML(s, c===0, c);
+                gt.innerHTML += buildCardHTML(s, c===0, c);
             });
             fauneEtFlore.champignons.forEach(s => {
                 const c = inventaireJoueur.filter(id => id === s.id).length;
                 gc.innerHTML += buildCardHTML(s, c===0, c);
             });
-            fauneEtFlore.arbres.forEach(s => {
+            tousAnimaux.forEach(s => {
                 const c = inventaireJoueur.filter(id => id === s.id).length;
-                gt.innerHTML += buildCardHTML(s, c===0, c);
+                ga.innerHTML += buildCardHTML(s, c===0, c);
             });
         }
 
@@ -1117,16 +1250,18 @@
 
         function switchTab(t) {
             document.querySelectorAll(".container").forEach(c=>c.classList.add("hidden"));
-            document.querySelectorAll("nav > button").forEach(b=>b.classList.remove("active"));
+            document.querySelectorAll("nav.main-nav button").forEach(b=>b.classList.remove("active"));
             document.getElementById("section-"+t).classList.remove("hidden");
-            document.getElementById("nav-"+t).classList.add("active");
+            const navBtn = document.getElementById("nav-"+t);
+            if (navBtn) navBtn.classList.add("active");
+            if (t === 'bonus') document.getElementById("nav-qcm").classList.add("active");
             if(t==='inventaire') { switchSubTabInventaire('plantes'); renderInventory(); }
             if(t==='marche') { switchSubTabMarche('tresorerie'); renderLaboratoire(); }
             updateHUD();
         }
 
         function switchSubTabInventaire(s) {
-            ['plantes', 'animaux', 'champignons', 'arbres'].forEach(tab => {
+            ['plantes', 'arbres', 'champignons', 'animaux'].forEach(tab => {
                 document.getElementById("view-"+tab).classList.add("hidden");
                 document.getElementById("subnav-"+tab).classList.remove("active");
             });
