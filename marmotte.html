@@ -404,8 +404,11 @@
             document.body.classList.remove('is-playing');
             const vidCont = document.getElementById("videoContainer");
             const fallbackMsg = document.getElementById("videoFallbackMsg");
+            const unmuteBtn = document.getElementById("btnUnmuteVideo");
             const playWithSoundBtn = document.getElementById("btnPlayIntroWithSound");
             vidCont.style.display = "flex";
+            if (unmuteBtn) unmuteBtn.style.display = "none";
+            if (playWithSoundBtn) playWithSoundBtn.style.display = "none";
 
             if (!introVideo) {
                 skipVideo();
@@ -428,10 +431,56 @@
             });
             introVideo.onerror = () => { fallbackMsg.style.display = "block"; };
 
-            // On met la vidéo en pause au début et on affiche le bouton Play "passe en mode paysage" !
-            introVideo.pause();
+            // Lance automatiquement la cinématique avec le son activé de base !
             introVideo.currentTime = 0;
-            playWithSoundBtn.style.display = "block";
+            introVideo.muted = false;
+            introVideo.volume = 1.0;
+            let playPromise = introVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    // Si le navigateur bloque l'autoplay avec son, on lance la vidéo en muet pour qu'elle démarre quand même,
+                    // et on affiche le bouton pour activer le son en 1 clic !
+                    introVideo.muted = true;
+                    if (unmuteBtn) unmuteBtn.style.display = "block";
+                    introVideo.play().catch(() => {
+                        if (unmuteBtn) unmuteBtn.style.display = "none";
+                        if (playWithSoundBtn) playWithSoundBtn.style.display = "block";
+                    });
+                });
+            }
+        }
+
+        function skipVideo() {
+            if (document.activeElement) document.activeElement.blur();
+            if (introVideo) {
+                introVideo.pause();
+            }
+            document.getElementById("videoContainer").style.display = "none";
+            showRulesScreen();
+        }
+
+        function showRulesScreen() {
+            if (document.activeElement) document.activeElement.blur();
+            state = 'RULES';
+            document.body.classList.remove('is-playing');
+            prepareGameWorld();
+            document.getElementById("videoContainer").style.display = "none";
+            document.getElementById("overlayScreen").style.display = "none";
+            document.getElementById("pauseScreen").style.display = "none";
+            document.getElementById("rulesScreen").style.display = "flex";
+        }
+
+        function startGameFromRules() {
+            if (document.activeElement) document.activeElement.blur();
+            // Sur téléphone/tablette, tente de passer en plein écran au lancement de la partie
+            if (('ontouchstart' in window || navigator.maxTouchPoints > 0) && !document.fullscreenElement) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                }
+            }
+            initGame();
         }
 
         // --- IMAGES ---
