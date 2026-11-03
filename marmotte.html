@@ -256,7 +256,7 @@
                     </div>
                     <div class="rule-item bonus">
                         <strong>🛹 Méga Rampes Violettes, Deltaplane 🪂 & Cartes 🐾</strong>
-                        Sur une <b>Méga Rampe violette</b> (3 sections), <b>relâche ⬆️ pendant chaque petit saut</b> entre les rampes puis <b>réappuie sur ⬆️</b> pour enchaîner le slide et attraper la <b>Carte Animal 🐾</b> !
+                        Sur une <b>Méga Rampe violette</b> (3 longues sections courbées), <b>relâche ⬆️ pendant chaque saut</b> entre les rampes puis <b>réappuie sur ⬆️</b> pour enchaîner le slide et attraper la <b>Carte Animal 🐾</b> !
                     </div>
                     <div class="rule-item warn">
                         <strong>⚠️ Attention à l'atterrissage & à l'Aigle !</strong>
@@ -488,7 +488,7 @@
             onRampJump: false,       // Slide effectué sur une rampe
             isGrindingRamp: false,   // Actuellement en train de glisser sur une rampe
             lastRampRef: null,       // Référence de la dernière section de rampe glissée (pour vérifier le relâchement entre 2 sections !)
-            hasReleasedBetweenRamps: true, // Oblige à relâcher ⬆️ pendant le petit saut entre deux sections de Méga Rampe !
+            hasReleasedBetweenRamps: true, // Oblige à relâcher ⬆️ pendant le saut entre deux sections de Méga Rampe !
             jumpedWithUpArrow: false,// Permet de sauter normalement avec ⬆️ ou ESPACE sans bloquer
             airFrames: 0,            // Temps passé en l'air
             isDoingTrick: false,     // Flèche du haut maintenue en l'air (skis sur le côté)
@@ -517,6 +517,30 @@
                     alpha: 0.25 + Math.random() * 0.45
                 });
             }
+        }
+
+        // --- COURBURE DOUCE (S-CURVE LATÉRALE + PROFIL ARQUÉ) DES RAMPES ET MÉGA RAMPES ---
+        function getRampLocalOffset(item, zPos) {
+            let len = item.lengthZ || 720;
+            let halfLen = len / 2;
+            let t = (zPos - (item.z - halfLen)) / len;
+            t = Math.max(0, Math.min(1, t));
+            let dir = item.curveDir !== undefined ? item.curveDir : 1;
+            let amp = item.type === "megaRamp" ? 58 : 34;
+            // Courbe en S douce qui part à 0 à l'entrée et revient à 0 à la sortie pour garder les sauts inter-rampes parfaitement alignés !
+            return Math.sin(t * Math.PI * 2) * amp * dir;
+        }
+
+        function getRampHeightAtZ(item, zPos) {
+            let len = item.lengthZ || 720;
+            let halfLen = len / 2;
+            let t = (zPos - (item.z - halfLen)) / len;
+            t = Math.max(0, Math.min(1, t));
+            let baseH = item.height || 95;
+            // Profil arqué ("rainbow rail" léger au milieu + petite lèvre d'éjection au bout de la rampe)
+            let arch = Math.sin(t * Math.PI) * (item.type === "megaRamp" ? 26 : 16);
+            let lipKick = Math.pow(t, 3) * 10;
+            return baseH + arch + lipKick;
         }
 
         // --- CONTRÔLES (ESPACE ou ⬆️ = Sauter au sol | ⬆️ en l'air = Skis sur le côté !) ---
@@ -1322,7 +1346,7 @@
                 if (rand >= 0.73) type = "grass";      // 16.5% herbe (0.73 à 0.895)
                 if (rand >= 0.895) type = "mogul";     // 5% BOSSE 3D normale (0.895 à 0.945)
                 if (rand >= 0.9450) type = "megaMogul";// Méga Bosse rare (0.20% : 0.9450 à 0.9470) !
-                if (rand >= 0.9470) type = "megaRamp"; // Méga Rampe Violette 3x 1,5L rare (0.20% : 0.9470 à 0.9490) !
+                if (rand >= 0.9470) type = "megaRamp"; // Méga Rampe Violette rare (0.20% : 0.9470 à 0.9490) !
                 if (rand >= 0.9490) type = "ramp";     // ~5.1% RAMPE orange normale (0.9490 à 1.00)
 
                 // Si le joueur vole déjà en deltaplane, on remplace les méga modules par des modules normaux
@@ -1338,21 +1362,24 @@
                 if (type === "mogul")      { obsWidth = 360; obsHeight = 130; obsLengthZ = 520; }  // Bosse 3D naturelle longue !
                 if (type === "megaMogul")  { obsWidth = 490; obsHeight = 195; obsLengthZ = 680; }  // Grosse bosse très rare + Deltaplane !
                 if (type === "ramp")       { obsWidth = 240; obsHeight = 95;  obsLengthZ = 720; }  // Rampe longue 3D (720) !
-                if (type === "megaRamp")   { obsWidth = 240; obsHeight = 95;  obsLengthZ = 1080; } // Segment de Méga Rampe (1,5 x 720 = 1080) !
+                if (type === "megaRamp")   { obsWidth = 240; obsHeight = 95;  obsLengthZ = 1620; } // Segment de Méga Rampe (encore x1.5 = 1620) !
 
                 // Les bosses et les rampes sont placées vers le centre de la piste (pas trop en bord de piste !).
                 let spawnX = (type === "ramp" || type === "megaRamp" || type === "mogul" || type === "megaMogul")
-                    ? (Math.random() - 0.5) * (WORLD_WIDTH * 0.48)
+                    ? (Math.random() - 0.5) * (WORLD_WIDTH * 0.44)
                     : -WORLD_WIDTH/2 + Math.random() * WORLD_WIDTH;
 
                 if (type === "megaRamp") {
-                    // MÉGA RAMPE VIOLETTE : 3 segments de longueur 1,5x (1080) alignés avec un écart de 310 Z
-                    // pour le petit saut où il faut relâcher ⬆️ puis réappuyer sur ⬆️ sur le segment suivant !
-                    const sectionLen = 1080; // 1.5 * 720
-                    const gapZ = 310;        // Espace calibré pour laisser ~0,35s afin de relâcher ⬆️ pendant le saut puis réappuyer
+                    // MÉGA RAMPE VIOLETTE :
+                    // - 3 segments de longueur encore x1.5 (1080 * 1.5 = 1620)
+                    // - Espacement x3 entre chaque segment (310 * 3 = 930)
+                    // - Courbures alternées élégantes (S-curve) + Carte Animal sur la 3e section !
+                    const sectionLen = 1620;
+                    const gapZ = 930;
                     for (let s = 0; s < 3; s++) {
                         let secZ = 4450 + s * (sectionLen + gapZ);
-                        obstacles.push({
+                        let cDir = (s % 2 === 0) ? 1 : -1;
+                        let rampObj = {
                             x: spawnX,
                             y: 0,
                             z: secZ,
@@ -1360,15 +1387,20 @@
                             width: 240,
                             height: 95,
                             lengthZ: sectionLen,
+                            curveDir: cDir,
                             sectionIndex: s + 1,
                             counted: false
-                        });
-                        // Carte Animal posée sur la 3e (dernière) section de la Méga Rampe !
+                        };
+                        obstacles.push(rampObj);
+                        // Carte Animal posée sur la 3e (dernière) section de la Méga Rampe (suit la courbure du rail) !
                         if (s === 2) {
+                            let cardZ = secZ + 220;
+                            let cardXOffset = getRampLocalOffset(rampObj, cardZ);
+                            let cardH = getRampHeightAtZ(rampObj, cardZ);
                             obstacles.push({
-                                x: spawnX,
-                                y: -95,
-                                z: secZ + 180,
+                                x: spawnX + cardXOffset,
+                                y: -cardH - 5,
+                                z: cardZ,
                                 type: "animalCard",
                                 width: 145,
                                 height: 190,
@@ -1377,15 +1409,17 @@
                             });
                         }
                     }
-                    // Laisse l'espace nécessaire pour que toute la Méga Rampe (3 segments) soit libre d'autres obstacles
-                    distSinceLastObstacle = -3750;
+                    // Laisse tout l'espace nécessaire pour que les 3 longues sections + leurs 2 grands sauts soient libres d'autres obstacles !
+                    distSinceLastObstacle = -(3 * sectionLen + 2 * gapZ);
                 } else {
+                    let cDir = Math.random() > 0.5 ? 1 : -1;
                     obstacles.push({
                         x: spawnX,
                         y: 0, z: 4200, type: type,
                         width: obsWidth,
                         height: obsHeight,
                         lengthZ: obsLengthZ,
+                        curveDir: cDir,
                         shape: Math.floor(Math.random() * 3),
                         counted: false,
                         gliderTaken: false
@@ -1469,36 +1503,40 @@
                     continue;
                 }
 
-                // Cas particulier 1 : RAMPE longitudinale (orange normale = 720 Z, ou segment de MÉGA RAMPE violette = 1080 Z)
+                // Cas particulier 1 : RAMPE longitudinale courbée (orange normale = 720 Z, ou segment de MÉGA RAMPE violette = 1620 Z)
                 if (obs.type === "ramp" || obs.type === "megaRamp") {
                     let halfLen = (obs.lengthZ || 720) / 2;
                     if (player.z > obs.z - halfLen && player.z < obs.z + halfLen) {
-                        // Zone de contact large et généreuse (175) même si la rampe est visuellement plus fine !
-                        if (Math.abs(player.x - obs.x) < 175) {
-                            // Si la marmotte est en plein petit saut entre deux segments de la Méga Rampe,
-                            // on la laisse décrire sa parabole tant qu'elle monte (vy < 0) ou est au-dessus du rail (y < -92) !
-                            let inAutoHopAboveRail = player.onRampJump && !player.isGrindingRamp && (player.vy < 0 || player.y < -92);
+                        // Position X et hauteur Y exactes du rail courbé à la profondeur actuelle de la marmotte !
+                        let railCenterX = obs.x + getRampLocalOffset(obs, player.z);
+                        let railTopY = -(getRampHeightAtZ(obs, player.z) - 7);
+
+                        // Zone de contact large et généreuse (180) autour de la courbe du rail
+                        if (Math.abs(player.x - railCenterX) < 180) {
+                            // Si la marmotte est en plein saut entre deux segments de la Méga Rampe,
+                            // on la laisse décrire sa parabole tant qu'elle monte (vy < 0) ou est au-dessus du rail !
+                            let inAutoHopAboveRail = player.onRampJump && !player.isGrindingRamp && (player.vy < 0 || player.y < railTopY - 4);
                             if (inAutoHopAboveRail) {
-                                // En plein petit saut au-dessus de l'entrée du segment suivant : le joueur doit relâcher ⬆️ !
+                                // En plein saut au-dessus de l'entrée du segment suivant : le joueur doit relâcher ⬆️ !
                             } else if (player.onRampJump && !player.isGrindingRamp && player.lastRampRef && player.lastRampRef !== obs) {
-                                // La marmotte retombe sur la section suivante de la Méga Rampe après le petit saut !
+                                // La marmotte retombe sur la section suivante de la Méga Rampe après le saut !
                                 if (!player.hasReleasedBetweenRamps) {
-                                    // Le joueur n'a JAMAIS relâché ⬆️ pendant le petit saut entre les 2 rampes -> CHUTE !
+                                    // Le joueur n'a JAMAIS relâché ⬆️ pendant le saut entre les 2 rampes -> CHUTE !
                                     player.trickAngle = 0;
                                     player.isDoingTrick = false;
                                     triggerEagleCatch(
                                         "CHUTE ENTRE LES RAMPES !",
-                                        "Tu dois relâcher la flèche du haut (⬆️) pendant le petit saut entre deux sections de la Méga Rampe, puis réappuyer sur ⬆️ sur la section suivante !"
+                                        "Tu dois relâcher la flèche du haut (⬆️) pendant le saut entre deux sections de la Méga Rampe, puis réappuyer sur ⬆️ sur la section suivante !"
                                     );
                                 } else {
-                                    // Le joueur a bien relâché ⬆️ pendant le saut ! Il est maintenant posé sur la nouvelle section :
-                                    // - S'il réappuie sur ⬆️ (`keys.up`), les skis s'enflamment en slide !
-                                    // - S'il n'a pas encore réappuyé sur ⬆️, il glisse droit sur le rail en attendant qu'il appuie sur ⬆️ !
+                                    // Le joueur a bien relâché ⬆️ pendant le saut ! Il atterrit sur la nouvelle section courbée :
                                     onRampThisFrame = true;
                                     player.onRampJump = true;
                                     player.grounded = false;
-                                    player.y = -88;
+                                    player.y = railTopY;
                                     player.vy = 0;
+                                    // Accompagne doucement la courbure latérale de la rampe pendant le slide
+                                    player.x += (railCenterX - player.x) * 0.16;
                                     if (keys.up) {
                                         player.isGrindingRamp = true;
                                         player.lastRampRef = obs;
@@ -1511,9 +1549,11 @@
                                 player.onRampJump = true;
                                 player.lastRampRef = obs;
                                 player.grounded = false;
-                                player.y = -88; // Perché sur le rail de la rampe !
+                                player.y = railTopY; // Suit la hauteur arquée du rail !
                                 player.vy = 0;
-                            } else if (Math.abs(player.x - obs.x) < 105 && player.y > -68 && !(landingBoostTimer > 0 && player.boostImmune)) {
+                                // Guide magnétiquement les skis le long de la courbe en S de la rampe !
+                                player.x += (railCenterX - player.x) * 0.18;
+                            } else if (Math.abs(player.x - railCenterX) < 105 && player.y > -68 && !(landingBoostTimer > 0 && player.boostImmune)) {
                                 // Si on percute la rampe sans sauter (et sans immunité de boost) : l'aigle nous rattrape !
                                 triggerEagleCatch(
                                     "CRASH SUR LA RAMPE !",
@@ -1621,11 +1661,11 @@
                 launchMogulJump(player.ridingMegaMogul, player.wantsMegaJump || keys.up);
             }
 
-            // Petit saut automatique à la sortie d'une section de rampe :
+            // Saut automatique à la sortie d'une section de rampe :
             // Le joueur DOIT relâcher ⬆️ pendant ce saut (comme à la fin d'une rampe normale) avant de toucher le sol ou la section suivante !
             if (player.isGrindingRamp && !onRampThisFrame) {
                 player.isGrindingRamp = false;
-                player.vy = -8.5;
+                player.vy = -9.2;
                 player.hasReleasedBetweenRamps = !keys.up;
             }
 
@@ -2401,88 +2441,103 @@
             ctx.restore();
         }
 
-        // --- DESSIN D'UNE RAMPE / RAIL DE SNOWPARK (ORANGE = NORMALE, VIOLETTE = MÉGA RAMPE) ---
+        // --- DESSIN D'UNE RAMPE / RAIL DE SNOWPARK COURBÉE EN 3D (ORANGE = NORMALE, VIOLETTE = MÉGA RAMPE) ---
         function drawRamp3D(ctx, item) {
             let isMegaRamp = (item.type === "megaRamp");
             let halfLen = (item.lengthZ || 720) / 2;
             let zFar = Math.min(4500, item.z + halfLen);   // Extrémité haute/lointaine de la rampe (coupée à l'horizon)
             let zNear = Math.max(15, item.z - halfLen);    // Extrémité basse/proche de la rampe
             if (zNear >= zFar) return;                     // Pas encore à l'horizon ou déjà derrière la caméra
-            let zMid = (zNear + zFar) * 0.5;               // Milieu visible de la rampe
 
-            let pFar = project(item.x, 0, zFar);
-            let pMid = project(item.x, 0, zMid);
-            let pNear = project(item.x, 0, zNear);
-
-            // Largeur graphique affinée (0.19 au lieu de 0.28) sans réduire la zone de contact !
-            let wFar = item.width * 0.19 * pFar.scale;
-            let wMid = item.width * 0.19 * pMid.scale;
-            let wNear = item.width * 0.19 * pNear.scale;
-
-            let hFar = item.height * pFar.scale;
-            let hMid = item.height * pMid.scale;
-            let hNear = item.height * pNear.scale;
+            // Découpage en 16 sous-segments pour dessiner une vraie courbure S-curve fluide et un profil arqué !
+            const steps = 16;
+            let pts = [];
+            for (let i = 0; i <= steps; i++) {
+                let z = zNear + (i / steps) * (zFar - zNear);
+                let localX = getRampLocalOffset(item, z);
+                let hVal = getRampHeightAtZ(item, z);
+                let p = project(item.x + localX, 0, z);
+                let w = item.width * 0.19 * p.scale;
+                let h = hVal * p.scale;
+                pts.push({ p: p, w: w, h: h, scale: p.scale });
+            }
 
             ctx.save();
-            // 1. Ombre portée longitudinale sur la neige sous toute la rampe
+
+            // 1. Ombre portée courbée sur la neige sous toute la rampe
             ctx.fillStyle = "rgba(20, 45, 70, 0.26)";
             ctx.beginPath();
-            ctx.moveTo(pNear.x - wNear * 1.25, pNear.y + 4);
-            ctx.lineTo(pFar.x - wFar * 1.25, pFar.y + 2);
-            ctx.lineTo(pFar.x + wFar * 1.25, pFar.y + 2);
-            ctx.lineTo(pNear.x + wNear * 1.25, pNear.y + 4);
+            for (let i = 0; i <= steps; i++) {
+                let pt = pts[i];
+                let x = pt.p.x - pt.w * 1.25;
+                let y = pt.p.y + 3;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            for (let i = steps; i >= 0; i--) {
+                let pt = pts[i];
+                ctx.lineTo(pt.p.x + pt.w * 1.25, pt.p.y + 3);
+            }
             ctx.closePath();
             ctx.fill();
 
-            // 2. Poteaux métalliques de soutien ancrés dans la neige (arrière, milieu, avant)
+            // 2. Poteaux métalliques de soutien ancrés dans la neige le long de la courbe
             ctx.strokeStyle = "#2c3e50";
-            [
-                { p: pFar, h: hFar, s: pFar.scale },
-                { p: pMid, h: hMid, s: pMid.scale },
-                { p: pNear, h: hNear, s: pNear.scale }
-            ].forEach(post => {
-                ctx.lineWidth = Math.max(2, 16 * post.s);
+            const postIndices = isMegaRamp ? [0, 4, 8, 12, 16] : [0, 8, 16];
+            postIndices.forEach(idx => {
+                let pt = pts[idx];
+                if (!pt) return;
+                ctx.lineWidth = Math.max(2, 16 * pt.scale);
                 ctx.beginPath();
-                ctx.moveTo(post.p.x, post.p.y);
-                ctx.lineTo(post.p.x, post.p.y - post.h * 0.85);
+                ctx.moveTo(pt.p.x, pt.p.y);
+                ctx.lineTo(pt.p.x, pt.p.y - pt.h * 0.85);
                 ctx.stroke();
             });
 
-            // 3. Flancs latéraux "Snowpark" le long de la rampe (Violet = Méga Rampe, Orange = Rampe normale)
+            // 3. Flancs latéraux "Snowpark" courbés (Violet = Méga Rampe, Orange = Rampe normale)
             ctx.fillStyle = isMegaRamp ? "#6c3483" : "#d35400";
             ctx.beginPath();
-            ctx.moveTo(pNear.x - wNear, pNear.y - hNear);
-            ctx.lineTo(pMid.x - wMid, pMid.y - hMid);
-            ctx.lineTo(pFar.x - wFar, pFar.y - hFar);
-            ctx.lineTo(pFar.x - wFar, pFar.y - hFar * 0.55);
-            ctx.lineTo(pMid.x - wMid, pMid.y - hMid * 0.55);
-            ctx.lineTo(pNear.x - wNear, pNear.y - hNear * 0.55);
+            for (let i = 0; i <= steps; i++) {
+                let pt = pts[i];
+                if (i === 0) ctx.moveTo(pt.p.x - pt.w, pt.p.y - pt.h);
+                else ctx.lineTo(pt.p.x - pt.w, pt.p.y - pt.h);
+            }
+            for (let i = steps; i >= 0; i--) {
+                let pt = pts[i];
+                ctx.lineTo(pt.p.x - pt.w, pt.p.y - pt.h * 0.55);
+            }
             ctx.closePath();
             ctx.fill();
 
             ctx.fillStyle = isMegaRamp ? "#8e44ad" : "#e67e22";
             ctx.beginPath();
-            ctx.moveTo(pNear.x + wNear, pNear.y - hNear);
-            ctx.lineTo(pMid.x + wMid, pMid.y - hMid);
-            ctx.lineTo(pFar.x + wFar, pFar.y - hFar);
-            ctx.lineTo(pFar.x + wFar, pFar.y - hFar * 0.55);
-            ctx.lineTo(pMid.x + wMid, pMid.y - hMid * 0.55);
-            ctx.lineTo(pNear.x + wNear, pNear.y - hNear * 0.55);
+            for (let i = 0; i <= steps; i++) {
+                let pt = pts[i];
+                if (i === 0) ctx.moveTo(pt.p.x + pt.w, pt.p.y - pt.h);
+                else ctx.lineTo(pt.p.x + pt.w, pt.p.y - pt.h);
+            }
+            for (let i = steps; i >= 0; i--) {
+                let pt = pts[i];
+                ctx.lineTo(pt.p.x + pt.w, pt.p.y - pt.h * 0.55);
+            }
             ctx.closePath();
             ctx.fill();
 
             // Face avant du caisson de la rampe
+            let p0 = pts[0];
             ctx.fillStyle = isMegaRamp ? "#4a235a" : "#a04000";
             ctx.beginPath();
-            ctx.moveTo(pNear.x - wNear, pNear.y - hNear);
-            ctx.lineTo(pNear.x + wNear, pNear.y - hNear);
-            ctx.lineTo(pNear.x + wNear, pNear.y - hNear * 0.52);
-            ctx.lineTo(pNear.x - wNear, pNear.y - hNear * 0.52);
+            ctx.moveTo(p0.p.x - p0.w, p0.p.y - p0.h);
+            ctx.lineTo(p0.p.x + p0.w, p0.p.y - p0.h);
+            ctx.lineTo(p0.p.x + p0.w, p0.p.y - p0.h * 0.52);
+            ctx.lineTo(p0.p.x - p0.w, p0.p.y - p0.h * 0.52);
             ctx.closePath();
             ctx.fill();
 
-            // 4. Plateau supérieur de glisse (dans le sens de la piste !)
-            let deckGrad = ctx.createLinearGradient(pNear.x, pNear.y - hNear, pFar.x, pFar.y - hFar);
+            // 4. Plateau supérieur de glisse courbé
+            let pLast = pts[steps];
+            let pMid = pts[Math.floor(steps / 2)];
+            let deckGrad = ctx.createLinearGradient(p0.p.x, p0.p.y - p0.h, pLast.p.x, pLast.p.y - pLast.h);
             deckGrad.addColorStop(0, "#ffffff");
             deckGrad.addColorStop(0.5, isMegaRamp ? "#ebd8f8" : "#dfe6e9");
             deckGrad.addColorStop(1, isMegaRamp ? "#c39bd3" : "#b2bec3");
@@ -2491,23 +2546,28 @@
             ctx.lineWidth = Math.max(1.5, 5 * pMid.scale);
 
             ctx.beginPath();
-            ctx.moveTo(pNear.x - wNear, pNear.y - hNear);
-            ctx.lineTo(pMid.x - wMid, pMid.y - hMid);
-            ctx.lineTo(pFar.x - wFar, pFar.y - hFar);
-            ctx.lineTo(pFar.x + wFar, pFar.y - hFar);
-            ctx.lineTo(pMid.x + wMid, pMid.y - hMid);
-            ctx.lineTo(pNear.x + wNear, pNear.y - hNear);
+            for (let i = 0; i <= steps; i++) {
+                let pt = pts[i];
+                if (i === 0) ctx.moveTo(pt.p.x - pt.w, pt.p.y - pt.h);
+                else ctx.lineTo(pt.p.x - pt.w, pt.p.y - pt.h);
+            }
+            for (let i = steps; i >= 0; i--) {
+                let pt = pts[i];
+                ctx.lineTo(pt.p.x + pt.w, pt.p.y - pt.h);
+            }
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
 
-            // Bande métallique centrale de slide sur le dessus de la rampe
+            // Bande métallique centrale de slide qui suit la courbe sur le dessus de la rampe
             ctx.strokeStyle = isMegaRamp ? "#6c3483" : "#2980b9";
             ctx.lineWidth = Math.max(1.5, 8 * pMid.scale);
             ctx.beginPath();
-            ctx.moveTo(pNear.x, pNear.y - hNear);
-            ctx.lineTo(pMid.x, pMid.y - hMid);
-            ctx.lineTo(pFar.x, pFar.y - hFar);
+            for (let i = 0; i <= steps; i++) {
+                let pt = pts[i];
+                if (i === 0) ctx.moveTo(pt.p.x, pt.p.y - pt.h);
+                else ctx.lineTo(pt.p.x, pt.p.y - pt.h);
+            }
             ctx.stroke();
             ctx.restore();
         }
@@ -2550,16 +2610,16 @@
             }
             renderList.push({ x: eagle.x, y: eagle.y, z: eagle.z, width: 540, height: 198, isEagle: true });
 
-            // Tri Profondeur Parfait (si la marmotte ou une Carte Animal est sur une rampe/méga rampe, on les dessine par-dessus !)
+            // Tri Profondeur Parfait (adapté aux sections de Méga Rampe de longueur 1620 -> seuil à 920 !)
             renderList.sort((a, b) => {
                 let zA = a.z;
                 let zB = b.z;
                 let aIsModule = (a.type === "ramp" || a.type === "megaRamp" || a.type === "mogul" || a.type === "megaMogul");
                 let bIsModule = (b.type === "ramp" || b.type === "megaRamp" || b.type === "mogul" || b.type === "megaMogul");
-                if (aIsModule && b.isPlayer && Math.abs(a.z - b.z) < 620) return -1;
-                if (bIsModule && a.isPlayer && Math.abs(a.z - b.z) < 620) return 1;
-                if (aIsModule && b.type === "animalCard" && Math.abs(a.z - b.z) < 620) return -1;
-                if (bIsModule && a.type === "animalCard" && Math.abs(a.z - b.z) < 620) return 1;
+                if (aIsModule && b.isPlayer && Math.abs(a.z - b.z) < 920) return -1;
+                if (bIsModule && a.isPlayer && Math.abs(a.z - b.z) < 920) return 1;
+                if (aIsModule && b.type === "animalCard" && Math.abs(a.z - b.z) < 920) return -1;
+                if (bIsModule && a.type === "animalCard" && Math.abs(a.z - b.z) < 920) return 1;
                 // Quand la marmotte saute par-dessus un sapin grâce à une bosse, on l'affiche par-dessus la cime du sapin !
                 if (a.type === "tree" && b.isPlayer && player.onMogulJump && !player.grounded && Math.abs(a.z - b.z) < 220) return -1;
                 if (b.type === "tree" && a.isPlayer && player.onMogulJump && !player.grounded && Math.abs(a.z - b.z) < 220) return 1;
@@ -2883,7 +2943,7 @@
                 if (!player.grounded) {
                     player.airFrames++;
 
-                    // Si on est dans le petit saut entre deux rampes et que le joueur relâche ⬆️, on valide le relâchement !
+                    // Si on est dans le saut entre deux rampes et que le joueur relâche ⬆️, on valide le relâchement !
                     if (player.onRampJump && !player.isGrindingRamp && !keys.up) {
                         player.hasReleasedBetweenRamps = true;
                     }
@@ -2917,10 +2977,9 @@
                                 player.vy += 0.55;
                             }
                         } else if (player.onRampJump) {
-                            // Gravité du petit saut de sortie de rampe :
-                            // Calibrée proportionnellement à currentSpeed pour laisser ~0,35s au joueur afin de relâcher ⬆️
-                            // et retomber sur la section suivante de la Méga Rampe !
-                            player.vy += 0.76 * (currentSpeed / 14.5);
+                            // Gravité du saut de sortie de rampe calibrée pour l'espacement x3 (gapZ = 930) :
+                            // Permet de franchir les 930 unités Z avec une belle courbe aérienne en laissant le temps de relâcher ⬆️ !
+                            player.vy += 0.76 * (currentSpeed / 43.5);
                         } else {
                             // Gravité d'un saut normal (sans bosse) : retombée franche et naturelle sans effet de flottement !
                             player.vy += 0.76;
@@ -3019,14 +3078,14 @@
                     isScenery: true
                 });
             }
-            // Placer une bosse de skatepark 3D longue et une rampe longue dès le départ pour tester les deux mécaniques !
+            // Placer une bosse de skatepark 3D longue et une rampe longue courbée dès le départ pour tester les deux mécaniques !
             obstacles.push({
                 x: -240, y: 0, z: 2100, type: "mogul",
                 width: 360, height: 130, lengthZ: 520, shape: 0, counted: false
             });
             obstacles.push({
                 x: 250, y: 0, z: 3400, type: "ramp",
-                width: 240, height: 95, lengthZ: 720, shape: 0, counted: false
+                width: 240, height: 95, lengthZ: 720, curveDir: 1, shape: 0, counted: false
             });
 
             player.x = 0; player.dx = 0; player.y = 0; player.vy = 0; player.grounded = true; player.boostImmune = false; player.boostPower = 0;
