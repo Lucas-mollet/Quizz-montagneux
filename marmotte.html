@@ -252,12 +252,12 @@
                         Utilise <b>⬅️ / ➡️</b> pour slalomer sur la piste et <b>ESPACE</b> pour sauter par-dessus les <b>rochers</b> et les <b>rondins</b>.
                     </div>
                     <div class="rule-item bonus">
-                        <strong>🔥 Bosses & Figures aériennes (⬆️)</strong>
-                        Sur une <b>bosse</b>, maintiens la <b>flèche du haut (⬆️)</b> en l'air pour incliner tes skis en flammes, sauter par-dessus les sapins et gagner un <b>boost d'atterrissage (avec immunité)</b> !
+                        <strong>🔥 Skis en feu = Distance x3 (⬆️)</strong>
+                        Sur une <b>bosse</b> ou une <b>rampe</b>, maintiens <b>⬆️</b> pour enflammer tes skis : <b>la distance parcourue compte triple (x3)</b> tant que tes skis sont en feu, et tu gagnes un <b>boost d'atterrissage (avec immunité)</b> !
                     </div>
                     <div class="rule-item bonus">
-                        <strong>🛹 Rampes, Deltaplane 🪂 & Cartes 🐾</strong>
-                        Plus tu réussis de figures (<b>⬆️</b>) sur les <b>bosses et rampes</b>, plus tu as de chances de faire apparaître des <b>Cartes Animal 🐾</b> ! En <b>deltaplane</b>, évite les <b>petits nuages</b> pour récupérer la carte cachée derrière !
+                        <strong>🛹 Super Rampes Violettes, Deltaplane 🪂 & Cartes 🐾</strong>
+                        Sur une <b>Super Rampe violette</b> (3 sections), laisse la marmotte faire ses <b>2 petits sauts intermédiaires</b> pour attraper la <b>Carte Animal 🐾</b> sur la dernière section ! En <b>deltaplane</b>, évite les <b>nuages</b> pour décrocher la carte !
                     </div>
                     <div class="rule-item warn">
                         <strong>⚠️ Attention à l'atterrissage & à l'Aigle !</strong>
@@ -1304,12 +1304,14 @@
                 if (rand >= 0.27) type = "rock";       // 24% rocher (0.27 à 0.51)
                 if (rand >= 0.51) type = "log";        // 22% tronc d'arbre couché / rondin (0.51 à 0.73)
                 if (rand >= 0.73) type = "grass";      // 16.5% herbe (0.73 à 0.895)
-                if (rand >= 0.895) type = "mogul";     // 5% BOSSE 3D normale (0.895 à 0.945)
-                if (rand >= 0.945) type = "megaMogul"; // Super bosse / super rampe encore plus rare (~0.20% : 0.945 à 0.9470) !
-                if (rand >= 0.9470) type = "ramp";     // ~5.3% RAMPE dans le sens de la piste (0.9470 à 1.00)
+                if (rand >= 0.895) type = "mogul";      // 5% BOSSE 3D normale (0.895 à 0.945)
+                if (rand >= 0.9450) type = "megaMogul"; // Super bosse très rare (0.20% : 0.9450 à 0.9470) !
+                if (rand >= 0.9470) type = "megaRamp";  // Super rampe violette (3x 1,5L) très rare (0.20% : 0.9470 à 0.9490) !
+                if (rand >= 0.9490) type = "ramp";      // ~5.1% RAMPE orange dans le sens de la piste (0.9490 à 1.00)
 
-                // Si le joueur vole déjà en deltaplane, on remplace la grosse bosse par une bosse normale
+                // Si le joueur vole déjà en deltaplane, on remplace les super modules par des modules normaux
                 if (type === "megaMogul" && player.gliderTimer > 0) type = "mogul";
+                if (type === "megaRamp" && player.gliderTimer > 0) type = "ramp";
 
                 let obsWidth = 260;
                 let obsHeight = 160;
@@ -1320,45 +1322,79 @@
                 if (type === "mogul")      { obsWidth = 360; obsHeight = 130; obsLengthZ = 520; } // Bosse 3D naturelle longue !
                 if (type === "megaMogul")  { obsWidth = 490; obsHeight = 195; obsLengthZ = 680; } // Grosse bosse très rare + Deltaplane !
                 if (type === "ramp")       { obsWidth = 240; obsHeight = 95; obsLengthZ = 720; }  // Rampe longue 3D !
+                if (type === "megaRamp")   { obsWidth = 240; obsHeight = 95; obsLengthZ = 1080; } // Section de Super Rampe (1,5x plus longue) !
 
                 // Les obstacles apparaissent au loin dans la pente (z = 4200).
-                // Les bosses (normales et super bosses) et les rampes sont placées vers le centre de la piste (pas trop en bord de piste !).
-                let spawnX = (type === "ramp" || type === "mogul" || type === "megaMogul")
+                // Les bosses (normales et super bosses) et les rampes (normales et super rampes) sont placées vers le centre de la piste.
+                let spawnX = (type === "ramp" || type === "megaRamp" || type === "mogul" || type === "megaMogul")
                     ? (Math.random() - 0.5) * (WORLD_WIDTH * 0.48)
                     : -WORLD_WIDTH/2 + Math.random() * WORLD_WIDTH;
 
-                obstacles.push({
-                    x: spawnX,
-                    y: 0, z: 4200, type: type,
-                    width: obsWidth,
-                    height: obsHeight,
-                    lengthZ: obsLengthZ,
-                    shape: Math.floor(Math.random() * 3),
-                    counted: false,
-                    gliderTaken: false
-                });
-
-                // Les items "Carte Animal" (🐾) hors deltaplane apparaissent UNIQUEMENT en l'air juste après une bosse normale ("mogul") ou une rampe ("ramp") !
-                // - Jamais avant 6 figures réussies (tricksLanded >= 6)
-                // - Probabilité basse pour rester rare (~1 fois toutes les 4 parties en moyenne)
-                let bonusCardChance = (tricksLanded >= 6) ? Math.min(0.14, 0.035 + (tricksLanded - 6) * 0.012) : 0;
-                if (!groundCardSpawnedThisRun && player.gliderTimer <= 0 && tricksLanded >= 6 && (type === "mogul" || type === "ramp") && Math.random() < bonusCardChance) {
-                    groundCardSpawnedThisRun = true;
-                    let cardZ = 4200 + (obsLengthZ / 2) + (type === "mogul" ? 360 : 190);
-                    let cardY = (type === "mogul") ? -175 : -105;
+                if (type === "megaRamp") {
+                    // SUPER RAMPE VIOLETTE : 3 rampes de longueur 1,5x (1080) mises à la suite avec 2 petits sauts intermédiaires
+                    // et une Carte Animal (🐾) systématique sur la 3ème (dernière) section !
+                    let sectionLen = 1080;
+                    let gapZ = 240;
+                    for (let s = 0; s < 3; s++) {
+                        let secZ = 4450 + s * (sectionLen + gapZ);
+                        obstacles.push({
+                            x: spawnX,
+                            y: 0,
+                            z: secZ,
+                            type: "megaRamp",
+                            width: 240,
+                            height: 95,
+                            lengthZ: sectionLen,
+                            sectionIndex: s + 1,
+                            counted: false
+                        });
+                        if (s === 2) {
+                            obstacles.push({
+                                x: spawnX,
+                                y: -95,
+                                z: secZ + 220,
+                                type: "animalCard",
+                                width: 145,
+                                height: 190,
+                                lengthZ: 80,
+                                counted: false
+                            });
+                        }
+                    }
+                    distSinceLastObstacle = -3600;
+                } else {
                     obstacles.push({
                         x: spawnX,
-                        y: cardY,
-                        z: cardZ,
-                        type: "animalCard",
-                        width: 145,
-                        height: 190,
-                        lengthZ: 80,
-                        counted: false
+                        y: 0, z: 4200, type: type,
+                        width: obsWidth,
+                        height: obsHeight,
+                        lengthZ: obsLengthZ,
+                        shape: Math.floor(Math.random() * 3),
+                        counted: false,
+                        gliderTaken: false
                     });
+
+                    // Les items "Carte Animal" (🐾) hors deltaplane/super rampe apparaissent UNIQUEMENT en l'air juste après une bosse normale ("mogul") ou une rampe ("ramp") !
+                    // - Jamais avant 6 figures réussies (tricksLanded >= 6)
+                    // - Probabilité basse pour rester rare (~1 fois toutes les 4 parties en moyenne)
+                    let bonusCardChance = (tricksLanded >= 6) ? Math.min(0.14, 0.035 + (tricksLanded - 6) * 0.012) : 0;
+                    if (!groundCardSpawnedThisRun && player.gliderTimer <= 0 && tricksLanded >= 6 && (type === "mogul" || type === "ramp") && Math.random() < bonusCardChance) {
+                        groundCardSpawnedThisRun = true;
+                        let cardZ = 4200 + (obsLengthZ / 2) + (type === "mogul" ? 360 : 190);
+                        let cardY = (type === "mogul") ? -175 : -105;
+                        obstacles.push({
+                            x: spawnX,
+                            y: cardY,
+                            z: cardZ,
+                            type: "animalCard",
+                            width: 145,
+                            height: 190,
+                            lengthZ: 80,
+                            counted: false
+                        });
+                    }
+                    distSinceLastObstacle = 0;
                 }
-                distSinceLastObstacle = 0; 
-            }
 
             let onGrassThisFrame = false;
             let onRampThisFrame = false;
@@ -1417,14 +1453,18 @@
                     continue;
                 }
 
-                // Cas particulier 1 : RAMPE longitudinale dans le sens de la piste (s'étend sur 720 unités Z)
-                if (obs.type === "ramp") {
+                // Cas particulier 1 : RAMPE longitudinale (orange normale = 720 Z, ou section de SUPER RAMPE violette = 1080 Z)
+                if (obs.type === "ramp" || obs.type === "megaRamp") {
                     let halfLen = (obs.lengthZ || 720) / 2;
                     if (player.z > obs.z - halfLen && player.z < obs.z + halfLen) {
                         // Zone de contact large et généreuse (175) même si la rampe est visuellement plus fine !
                         if (Math.abs(player.x - obs.x) < 175) {
-                            // Pour prendre la rampe : il faut avoir sauté (!player.grounded) ET mettre les skis sur le côté (⬆️) !
-                            if ((!player.grounded || player.isGrindingRamp) && (keys.up || player.trickAngle > 0.15 || player.isGrindingRamp)) {
+                            // Si la marmotte effectue le petit saut de fin entre deux sections d'une Super Rampe (vy < 0 ou y < -88),
+                            // on la laisse décrire son petit saut en l'air jusqu'à ce qu'elle retombe sur la section suivante (y >= -88) !
+                            let inHopArcAboveRail = player.onRampJump && !player.isGrindingRamp && (player.vy < 0 || player.y < -88);
+                            if (inHopArcAboveRail) {
+                                // En plein petit saut au-dessus de la section suivante
+                            } else if ((!player.grounded || player.isGrindingRamp) && (keys.up || player.trickAngle > 0.15 || player.isGrindingRamp)) {
                                 onRampThisFrame = true;
                                 player.isGrindingRamp = true;
                                 player.onRampJump = true;
@@ -1539,10 +1579,11 @@
                 launchMogulJump(player.ridingMegaMogul, player.wantsMegaJump || keys.up);
             }
 
-            // Si on vient de quitter le bout de la rampe, petit saut de sortie pour laisser le temps de relâcher ⬆️ avant le sol !
+            // Si on vient de quitter le bout d'une rampe, petit saut de fin (calibré avec la vitesse pour retomber pile sur la section suivante d'une Super Rampe !)
             if (player.isGrindingRamp && !onRampThisFrame) {
                 player.isGrindingRamp = false;
-                player.vy = -8.5;
+                let speedScale = Math.max(1, currentSpeed / 32);
+                player.vy = -7.8 * speedScale;
             }
 
             // Vitesse : plein élan en Deltaplane, léger ralenti UNIQUEMENT si on fait une figure après une bosse, et vitesse normale sur un saut normal !
@@ -2317,12 +2358,14 @@
             ctx.restore();
         }
 
-        // --- DESSIN D'UNE RAMPE / RAIL DE SNOWPARK ORIENTÉE DANS LE SENS DE LA PISTE (AXE Z) ---
+        // --- DESSIN D'UNE RAMPE / RAIL DE SNOWPARK ORIENTÉE DANS LE SENS DE LA PISTE (ORANGE = NORMALE, VIOLETTE = SUPER RAMPE) ---
         function drawRamp3D(ctx, item) {
+            let isMegaRamp = (item.type === "megaRamp");
             let halfLen = (item.lengthZ || 720) / 2;
-            let zFar = item.z + halfLen;                   // Extrémité haute/lointaine de la rampe (dans la pente)
-            let zMid = item.z;                             // Milieu de la rampe
+            let zFar = Math.min(4500, item.z + halfLen);   // Extrémité haute/lointaine de la rampe (coupée à l'horizon)
             let zNear = Math.max(15, item.z - halfLen);    // Extrémité basse/proche de la rampe
+            if (zNear >= zFar) return;                     // Pas encore à l'horizon ou déjà derrière la caméra
+            let zMid = (zNear + zFar) * 0.5;               // Milieu visible de la rampe
 
             let pFar = project(item.x, 0, zFar);
             let pMid = project(item.x, 0, zMid);
@@ -2362,8 +2405,8 @@
                 ctx.stroke();
             });
 
-            // 3. Flancs latéraux orange vif "Snowpark" le long de la rampe
-            ctx.fillStyle = "#d35400";
+            // 3. Flancs latéraux "Snowpark" le long de la rampe (Orange vif ou Violet Super Rampe !)
+            ctx.fillStyle = isMegaRamp ? "#6c3483" : "#d35400";
             ctx.beginPath();
             ctx.moveTo(pNear.x - wNear, pNear.y - hNear);
             ctx.lineTo(pMid.x - wMid, pMid.y - hMid);
@@ -2374,7 +2417,7 @@
             ctx.closePath();
             ctx.fill();
 
-            ctx.fillStyle = "#e67e22";
+            ctx.fillStyle = isMegaRamp ? "#8e44ad" : "#e67e22";
             ctx.beginPath();
             ctx.moveTo(pNear.x + wNear, pNear.y - hNear);
             ctx.lineTo(pMid.x + wMid, pMid.y - hMid);
@@ -2386,7 +2429,7 @@
             ctx.fill();
 
             // Face avant du caisson de la rampe
-            ctx.fillStyle = "#a04000";
+            ctx.fillStyle = isMegaRamp ? "#4a235a" : "#a04000";
             ctx.beginPath();
             ctx.moveTo(pNear.x - wNear, pNear.y - hNear);
             ctx.lineTo(pNear.x + wNear, pNear.y - hNear);
@@ -2398,10 +2441,10 @@
             // 4. Plateau supérieur de glisse (dans le sens de la piste !)
             let deckGrad = ctx.createLinearGradient(pNear.x, pNear.y - hNear, pFar.x, pFar.y - hFar);
             deckGrad.addColorStop(0, "#ffffff");
-            deckGrad.addColorStop(0.5, "#dfe6e9");
-            deckGrad.addColorStop(1, "#b2bec3");
+            deckGrad.addColorStop(0.5, isMegaRamp ? "#ebd8f8" : "#dfe6e9");
+            deckGrad.addColorStop(1, isMegaRamp ? "#c39bd3" : "#b2bec3");
             ctx.fillStyle = deckGrad;
-            ctx.strokeStyle = "#f39c12"; // Bordures jaunes/oranges de snowpark
+            ctx.strokeStyle = isMegaRamp ? "#a55eea" : "#f39c12"; // Bordures violettes (Super Rampe) ou oranges (Rampe normale)
             ctx.lineWidth = Math.max(1.5, 5 * pMid.scale);
 
             ctx.beginPath();
@@ -2416,7 +2459,7 @@
             ctx.stroke();
 
             // Bande métallique centrale de slide sur le dessus de la rampe
-            ctx.strokeStyle = "#2980b9";
+            ctx.strokeStyle = isMegaRamp ? "#6c3483" : "#2980b9";
             ctx.lineWidth = Math.max(1.5, 8 * pMid.scale);
             ctx.beginPath();
             ctx.moveTo(pNear.x, pNear.y - hNear);
@@ -2468,10 +2511,13 @@
             renderList.sort((a, b) => {
                 let zA = a.z;
                 let zB = b.z;
-                let aIsModule = (a.type === "ramp" || a.type === "mogul" || a.type === "megaMogul");
-                let bIsModule = (b.type === "ramp" || b.type === "mogul" || b.type === "megaMogul");
-                if (aIsModule && b.isPlayer && Math.abs(a.z - b.z) < 480) return -1;
-                if (bIsModule && a.isPlayer && Math.abs(a.z - b.z) < 480) return 1;
+                let aIsModule = (a.type === "ramp" || a.type === "megaRamp" || a.type === "mogul" || a.type === "megaMogul");
+                let bIsModule = (b.type === "ramp" || b.type === "megaRamp" || b.type === "mogul" || b.type === "megaMogul");
+                if (aIsModule && b.isPlayer && Math.abs(a.z - b.z) < 620) return -1;
+                if (bIsModule && a.isPlayer && Math.abs(a.z - b.z) < 620) return 1;
+                // Si une Carte Animal est posée sur une rampe (ex: dernière section de la Super Rampe), on l'affiche par-dessus la rampe !
+                if (aIsModule && b.type === "animalCard" && Math.abs(a.z - b.z) < 620) return -1;
+                if (bIsModule && a.type === "animalCard" && Math.abs(a.z - b.z) < 620) return 1;
                 // Quand la marmotte saute par-dessus un sapin grâce à une bosse, on l'affiche par-dessus la cime du sapin !
                 if (a.type === "tree" && b.isPlayer && player.onMogulJump && !player.grounded && Math.abs(a.z - b.z) < 220) return -1;
                 if (b.type === "tree" && a.isPlayer && player.onMogulJump && !player.grounded && Math.abs(a.z - b.z) < 220) return 1;
@@ -2484,8 +2530,8 @@
             }); 
 
             renderList.forEach(item => {
-                if (item.z <= 0 && item.type !== "ramp" && item.type !== "mogul" && item.type !== "megaMogul") return;
-                if (item.type === "ramp") {
+                if (item.z <= 0 && item.type !== "ramp" && item.type !== "megaRamp" && item.type !== "mogul" && item.type !== "megaMogul") return;
+                if (item.type === "ramp" || item.type === "megaRamp") {
                     drawRamp3D(ctx, item);
                     return;
                 }
@@ -2493,6 +2539,7 @@
                     drawMogul3D(ctx, item);
                     return;
                 }
+                if (item.z > 4500) return; // Pas encore franchi la ligne d'horizon de la piste
 
                 let p = project(item.x, item.y, item.z);
                 let vw = item.width * p.scale; let vh = item.height * p.scale;
@@ -2822,6 +2869,10 @@
                             } else {
                                 player.vy += 0.55;
                             }
+                        } else if (player.onRampJump) {
+                            // Petit saut de fin de rampe (calibré avec la vitesse pour retomber pile sur la section suivante des Super Rampes !)
+                            let speedScale = Math.max(1, currentSpeed / 32);
+                            player.vy += 0.76 * speedScale * speedScale;
                         } else {
                             // Gravité d'un saut normal (sans bosse) : retombée franche et naturelle sans effet de flottement !
                             player.vy += 0.76;
@@ -2878,7 +2929,9 @@
                 }
             }
 
-            score += (currentSpeed / 10);
+            // Lorsque la marmotte a les skis en feu (sur les rampes ou pendant une figure sur les bosses), la distance parcourue compte TRIPLE (x3) !
+            let skisOnFireNow = !player.grounded && player.gliderTimer <= 0 && (((player.onMogulJump || player.onRampJump) && player.isDoingTrick && player.trickAngle > 0.25) || player.isGrindingRamp);
+            score += (currentSpeed / 10) * (skisOnFireNow ? 3 : 1);
             document.getElementById("score").innerText = Math.floor(score);
             
             handleObstacles();
