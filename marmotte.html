@@ -29,20 +29,18 @@
 
         #scoreBoard {
             font-size: 22px; font-weight: 800;
-            background: rgba(15, 32, 48, 0.65);
+            background: rgba(15, 32, 48, 0.85);
             padding: 8px 18px; border-radius: 30px;
             border: 2px solid rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(6px);
             text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
             pointer-events: auto;
         }
 
         .controls-info {
             font-size: 14px; color: rgba(255, 255, 255, 0.92);
-            background: rgba(15, 32, 48, 0.55);
+            background: rgba(15, 32, 48, 0.78);
             padding: 7px 15px; border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(4px);
             text-shadow: 1px 1px 2px #000;
         }
 
@@ -52,10 +50,10 @@
         }
 
         .hud-btn {
-            padding: 8px 16px; background: rgba(15, 32, 48, 0.72); color: white;
+            padding: 8px 16px; background: rgba(15, 32, 48, 0.85); color: white;
             border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 22px;
             font-size: 14px; font-weight: bold; cursor: pointer; text-decoration: none;
-            backdrop-filter: blur(5px); transition: 0.2s;
+            transition: 0.2s;
         }
         .hud-btn:hover { background: rgba(255, 255, 255, 0.22); border-color: white; }
         .btn-back { background: rgba(231, 76, 60, 0.88); border-color: rgba(255,255,255,0.4); }
@@ -180,9 +178,9 @@
         #btnMuteBottom {
             position: absolute; bottom: 22px; left: 24px; padding: 10px 20px;
             font-size: 15px; font-weight: bold; cursor: pointer;
-            background: rgba(15, 32, 48, 0.78); color: white;
+            background: rgba(15, 32, 48, 0.88); color: white;
             border: 2px solid rgba(255, 255, 255, 0.45); border-radius: 26px;
-            backdrop-filter: blur(6px); transition: 0.2s; z-index: 120;
+            transition: 0.2s; z-index: 120;
             box-shadow: 0 4px 14px rgba(0,0,0,0.45);
         }
         #btnMuteBottom:hover { background: rgba(255, 255, 255, 0.22); border-color: white; transform: scale(1.03); }
@@ -190,12 +188,12 @@
         #touchControls { position: absolute; bottom: 22px; right: 24px; display: none; z-index: 80; pointer-events: auto; touch-action: none; }
         #btnLeft, #btnRight { display: none !important; }
         #btnJump {
-            padding: 12px 20px; background: rgba(15, 32, 48, 0.75);
+            padding: 12px 20px; background: rgba(15, 32, 48, 0.88);
             border: 2px solid rgba(255,255,255,0.85); color: #fff;
             border-radius: 28px; cursor: pointer; text-align: center;
             user-select: none; -webkit-user-select: none;
             font-weight: 800; font-size: 14px; touch-action: none;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.45);
         }
         #btnJump:active { background: rgba(46, 204, 113, 0.8); transform: scale(0.95); }
         @media (max-width: 1024px), (pointer: coarse) { body.is-playing #touchControls { display: flex; } }
@@ -507,7 +505,7 @@
         // Initialisation de la texture de neige (sillons dans le sens de la glisse + cristaux)
         function initSnowTexture() {
             snowSparkles = [];
-            for (let i = 0; i < 130; i++) {
+            for (let i = 0; i < 65; i++) {
                 snowSparkles.push({
                     x: (Math.random() - 0.5) * WORLD_WIDTH * 2.4,
                     z: Math.random() * 4400,
@@ -519,26 +517,29 @@
             }
         }
 
-        // --- COURBURE DOUCE (S-CURVE LATÉRALE + PROFIL ARQUÉ) DES RAMPES ET MÉGA RAMPES ---
+        // --- COURBURE DOUCE (S-CURVE LATÉRALE + PROFIL ARQUÉ) UNIQUEMENT POUR LES SUPER RAMPES (MÉGA RAMPES VIOLETTES) ---
         function getRampLocalOffset(item, zPos) {
-            let len = item.lengthZ || 720;
+            // Les rampes normales (oranges) restent parfaitement droites comme avant !
+            if (item.type !== "megaRamp") return 0;
+            let len = item.lengthZ || 1620;
             let halfLen = len / 2;
             let t = (zPos - (item.z - halfLen)) / len;
             t = Math.max(0, Math.min(1, t));
             let dir = item.curveDir !== undefined ? item.curveDir : 1;
-            let amp = item.type === "megaRamp" ? 58 : 34;
             // Courbe en S douce qui part à 0 à l'entrée et revient à 0 à la sortie pour garder les sauts inter-rampes parfaitement alignés !
-            return Math.sin(t * Math.PI * 2) * amp * dir;
+            return Math.sin(t * Math.PI * 2) * 58 * dir;
         }
 
         function getRampHeightAtZ(item, zPos) {
-            let len = item.lengthZ || 720;
+            let baseH = item.height || 95;
+            // Les rampes normales (oranges) restent parfaitement droites et régulières comme avant !
+            if (item.type !== "megaRamp") return baseH;
+            let len = item.lengthZ || 1620;
             let halfLen = len / 2;
             let t = (zPos - (item.z - halfLen)) / len;
             t = Math.max(0, Math.min(1, t));
-            let baseH = item.height || 95;
-            // Profil arqué ("rainbow rail" léger au milieu + petite lèvre d'éjection au bout de la rampe)
-            let arch = Math.sin(t * Math.PI) * (item.type === "megaRamp" ? 26 : 16);
+            // Profil arqué ("rainbow rail" léger au milieu + petite lèvre d'éjection au bout de la super rampe)
+            let arch = Math.sin(t * Math.PI) * 26;
             let lipKick = Math.pow(t, 3) * 10;
             return baseH + arch + lipKick;
         }
@@ -746,11 +747,11 @@
             initGame();
         }
 
-        // Calcule le décalage X de la piste à une distance Z avec transition ultra-fluide (zéro saccade !)
+        // Calcule le décalage X de la piste à une distance Z avec transition ultra-fluide et virages adoucis
         function getTrackCurveOffset(z) {
             let dz = Math.max(0, z - player.z);
-            // L'amplitude de l'ondulation est lissée par currentCurve (sans Math.abs brusque !)
-            return currentCurve * Math.pow(dz, 1.48) * 0.0085 + Math.sin((z + groundScroll) * 0.0014) * 85 * currentCurve;
+            // Virages légèrement adoucis (0.0068 et ondulation 62) pour une glisse encore plus agréable
+            return currentCurve * Math.pow(dz, 1.48) * 0.0068 + Math.sin((z + groundScroll) * 0.0013) * 62 * currentCurve;
         }
 
         // --- MOTEUR 3D : VUE PLONGEANTE ET PENTE ENCORE PLUS RAIDE (SANS DÉFORMATION AU LOIN) ---
@@ -910,31 +911,35 @@
                 ctx.fillStyle = "#2c3e50";
                 ctx.beginPath(); ctx.moveTo(vx - 1, vy - 2); ctx.lineTo(vx + 2.5, vy - 12); ctx.lineTo(vx + 6, vy - 2); ctx.fill();
 
-                // Lisière de sapins enneigés tout en bas de la vallée
+                // Lisière de sapins enneigés tout en bas de la vallée (tracés regroupés pour une fluidité maximale !)
+                ctx.fillStyle = "#1b4332";
+                ctx.beginPath();
                 for (let tx = 0; tx < 800; tx += 20) {
                     let th = 9 + (tx * 7 % 7);
                     let ty = 164 + (tx * 3 % 9);
-                    ctx.fillStyle = "#1b4332";
-                    ctx.beginPath();
                     ctx.moveTo(ox + tx, ty - th);
                     ctx.lineTo(ox + tx - 5, ty);
                     ctx.lineTo(ox + tx + 5, ty);
-                    ctx.fill();
-                    // Pointe blanche de neige sur les sapins de la vallée
-                    ctx.fillStyle = "#ecf0f1";
-                    ctx.beginPath();
+                }
+                ctx.fill();
+
+                ctx.fillStyle = "#ecf0f1";
+                ctx.beginPath();
+                for (let tx = 0; tx < 800; tx += 20) {
+                    let th = 9 + (tx * 7 % 7);
+                    let ty = 164 + (tx * 3 % 9);
                     ctx.moveTo(ox + tx, ty - th);
                     ctx.lineTo(ox + tx - 2.5, ty - th * 0.5);
                     ctx.lineTo(ox + tx + 2.5, ty - th * 0.5);
-                    ctx.fill();
                 }
+                ctx.fill();
             }
             ctx.restore();
         }
 
         function drawGround() {
             const zFar = 4500;
-            const steps = 60;
+            const steps = 26;
 
             // 1. Fond de neige poudreuse lisse (remonte jusqu'à Y=66 pour suivre la pente encore plus raide !)
             let snowBaseGrad = ctx.createLinearGradient(0, 66, 0, LOGIC_H);
@@ -944,24 +949,34 @@
             ctx.fillStyle = snowBaseGrad;
             ctx.fillRect(0, 66, LOGIC_W, LOGIC_H - 66);
 
+            // Calcul unique des bords gauche et droit de la piste (réutilisé pour le couloir et les filets !)
+            let leftBorderPts = [];
+            let rightBorderPts = [];
+            for (let i = 0; i <= steps; i++) {
+                let z = Math.max(10, (i / steps) * zFar);
+                leftBorderPts.push(project(-WORLD_WIDTH * 0.5, 0, z));
+                rightBorderPts.push(project(WORLD_WIDTH * 0.5, 0, z));
+            }
+
             // Couloir central de la piste damée (plus clair que les bords hors-piste)
             ctx.fillStyle = "rgba(255, 255, 255, 0.48)";
             ctx.beginPath();
             for (let i = 0; i <= steps; i++) {
-                let z = (i / steps) * zFar;
-                let pL = project(-WORLD_WIDTH * 0.5, 0, z);
+                let pL = leftBorderPts[i];
                 if (i === 0) ctx.moveTo(pL.x, pL.y);
                 else ctx.lineTo(pL.x, pL.y);
             }
             for (let i = steps; i >= 0; i--) {
-                let z = (i / steps) * zFar;
-                let pR = project(WORLD_WIDTH * 0.5, 0, z);
+                let pR = rightBorderPts[i];
                 ctx.lineTo(pR.x, pR.y);
             }
             ctx.closePath();
             ctx.fill();
 
             // 2. Vraie texture de glisse : sillons longitudinaux dans le sens de la pente + cristaux de neige scintillants
+            ctx.strokeStyle = "rgba(175, 208, 240, 0.42)";
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
             for (let i = 0; i < snowSparkles.length; i++) {
                 let s = snowSparkles[i];
                 if (state === 'PLAY') {
@@ -972,22 +987,17 @@
                     }
                 }
                 let p1 = project(s.x, 0, s.z);
-                let p2 = project(s.x, 0, s.z + s.len);
                 if (s.isSparkle) {
-                    // Petit cristal de neige brillant au soleil
-                    ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha + 0.3})`;
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
                     let r = Math.max(1.2, 3.5 * p1.scale);
                     ctx.fillRect(p1.x - r/2, p1.y - r/2, r, r);
                 } else {
-                    // Sillon de neige longitudinal (dans le sens de la descente, jamais horizontal !)
-                    ctx.strokeStyle = `rgba(175, 208, 240, ${s.alpha})`;
-                    ctx.lineWidth = Math.max(0.8, s.width * p1.scale);
-                    ctx.beginPath();
+                    let p2 = project(s.x, 0, s.z + s.len);
                     ctx.moveTo(p1.x, p1.y);
                     ctx.lineTo(p2.x, p2.y);
-                    ctx.stroke();
                 }
             }
+            ctx.stroke();
 
             // 3. Double traînée continue de neige / carving derrière les skis de la marmotte !
             for (let i = skiTracks.length - 1; i >= 0; i--) {
@@ -1024,28 +1034,20 @@
                 });
             }
 
-            // 4. Bords de piste incurvés (Filets Rouges + Piquets de Piste Noire qui suivent les virages !)
-            ctx.strokeStyle = "rgba(180, 210, 240, 0.55)";
-            ctx.lineWidth = 10;
-            [-WORLD_WIDTH/2, WORLD_WIDTH/2].forEach(borderX => {
+            // 4. Bords de piste incurvés (réutilise les points projetés leftBorderPts et rightBorderPts !)
+            [leftBorderPts, rightBorderPts].forEach(borderPts => {
+                ctx.strokeStyle = "rgba(180, 210, 240, 0.55)";
+                ctx.lineWidth = 10;
                 ctx.beginPath();
-                for (let z = 10; z <= zFar; z += 150) {
-                    let p = project(borderX, 0, z);
-                    if (z === 10) ctx.moveTo(p.x, p.y);
+                for (let i = 0; i <= steps; i++) {
+                    let p = borderPts[i];
+                    if (i === 0) ctx.moveTo(p.x, p.y);
                     else ctx.lineTo(p.x, p.y);
                 }
                 ctx.stroke();
-            });
 
-            ctx.strokeStyle = "rgba(231, 76, 60, 0.85)";
-            ctx.lineWidth = 3.5;
-            [-WORLD_WIDTH/2, WORLD_WIDTH/2].forEach(borderX => {
-                ctx.beginPath();
-                for (let z = 10; z <= zFar; z += 150) {
-                    let p = project(borderX, 0, z);
-                    if (z === 10) ctx.moveTo(p.x, p.y);
-                    else ctx.lineTo(p.x, p.y);
-                }
+                ctx.strokeStyle = "rgba(231, 76, 60, 0.85)";
+                ctx.lineWidth = 3.5;
                 ctx.stroke();
             });
 
@@ -1950,26 +1952,28 @@
             }
             ctx.fill();
 
-            // 3. Touffes de brins d'herbe courbés et petites pierres d'alpage réparties sur la plaque
-            let bladeCount = 11;
+            // 3. Touffes de brins d'herbe courbés réparties sur la plaque (tracés regroupés en 2 passes pour une fluidité parfaite)
+            let bladeCount = 9;
             ctx.lineCap = "round";
-            for (let i = -bladeCount; i <= bladeCount; i++) {
-                let bx = (i / bladeCount) * (vw * 0.41);
-                let by = Math.sin(i * 1.7 + shape) * (patchH * 0.38);
-                let bh = patchH * (0.85 + (Math.abs(i * 3) % 3) * 0.25);
-
-                // 3 brins en éventail par touffe
-                ctx.strokeStyle = (i % 2 === 0) ? "#2e7d32" : "#78e08f";
-                ctx.lineWidth = Math.max(1.1, vw * 0.0055);
+            ctx.lineWidth = Math.max(1.1, vw * 0.0055);
+            ["#2e7d32", "#78e08f"].forEach((col, parity) => {
+                ctx.strokeStyle = col;
                 ctx.beginPath();
-                ctx.moveTo(bx, by);
-                ctx.quadraticCurveTo(bx - vw * 0.012, by - bh * 0.6, bx - vw * 0.022, by - bh);
-                ctx.moveTo(bx, by);
-                ctx.quadraticCurveTo(bx, by - bh * 0.7, bx + vw * 0.004, by - bh * 1.12);
-                ctx.moveTo(bx, by);
-                ctx.quadraticCurveTo(bx + vw * 0.012, by - bh * 0.6, bx + vw * 0.022, by - bh * 0.95);
+                for (let i = -bladeCount; i <= bladeCount; i++) {
+                    if (Math.abs(i % 2) !== parity) continue;
+                    let bx = (i / bladeCount) * (vw * 0.41);
+                    let by = Math.sin(i * 1.7 + shape) * (patchH * 0.38);
+                    let bh = patchH * (0.85 + (Math.abs(i * 3) % 3) * 0.25);
+
+                    ctx.moveTo(bx, by);
+                    ctx.quadraticCurveTo(bx - vw * 0.012, by - bh * 0.6, bx - vw * 0.022, by - bh);
+                    ctx.moveTo(bx, by);
+                    ctx.quadraticCurveTo(bx, by - bh * 0.7, bx + vw * 0.004, by - bh * 1.12);
+                    ctx.moveTo(bx, by);
+                    ctx.quadraticCurveTo(bx + vw * 0.012, by - bh * 0.6, bx + vw * 0.022, by - bh * 0.95);
+                }
                 ctx.stroke();
-            }
+            });
         }
 
         // --- FONCTION POUR DESSINER UN JOLI SKI DÉTAILLÉ (AVEC FLAMMES PENDANT LES FIGURES ET SUR LES RAMPES !) ---
@@ -2441,16 +2445,51 @@
             ctx.restore();
         }
 
-        // --- DESSIN D'UNE RAMPE / RAIL DE SNOWPARK COURBÉE EN 3D (ORANGE = NORMALE, VIOLETTE = MÉGA RAMPE) ---
+        // --- DESSIN D'UNE RAMPE / RAIL DE SNOWPARK EN 3D (ORANGE = NORMALE DROITE, VIOLETTE = MÉGA RAMPE ONDULÉE + LIGNE BLEUE ANNONCIATRICE) ---
         function drawRamp3D(ctx, item) {
             let isMegaRamp = (item.type === "megaRamp");
             let halfLen = (item.lengthZ || 720) / 2;
+
+            // Signe annonciateur avant la 1re section de la Super Rampe violette :
+            // une ligne bleue légèrement visible tracée sur la neige en amont de la rampe pour permettre de bien anticiper !
+            if (isMegaRamp && item.sectionIndex === 1) {
+                let zWarnNear = Math.max(15, item.z - halfLen - 1350);
+                let zWarnFar  = Math.min(4500, item.z - halfLen);
+                if (zWarnNear < zWarnFar) {
+                    const warnSteps = 6;
+                    let warnPts = [];
+                    for (let w = 0; w <= warnSteps; w++) {
+                        let zw = zWarnNear + (w / warnSteps) * (zWarnFar - zWarnNear);
+                        warnPts.push(project(item.x, 0, zw));
+                    }
+                    let midScale = warnPts[Math.floor(warnSteps / 2)].scale;
+                    ctx.save();
+                    ctx.lineCap = "round";
+
+                    // Halo bleu doux sur la neige
+                    ctx.strokeStyle = "rgba(52, 152, 219, 0.22)";
+                    ctx.lineWidth = Math.max(3.5, 18 * midScale);
+                    ctx.beginPath();
+                    for (let w = 0; w <= warnSteps; w++) {
+                        if (w === 0) ctx.moveTo(warnPts[w].x, warnPts[w].y);
+                        else ctx.lineTo(warnPts[w].x, warnPts[w].y);
+                    }
+                    ctx.stroke();
+
+                    // Ligne bleue légèrement visible au centre menant droit à l'entrée de la rampe violette
+                    ctx.strokeStyle = "rgba(41, 128, 185, 0.48)";
+                    ctx.lineWidth = Math.max(1.8, 6.5 * midScale);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
             let zFar = Math.min(4500, item.z + halfLen);   // Extrémité haute/lointaine de la rampe (coupée à l'horizon)
             let zNear = Math.max(15, item.z - halfLen);    // Extrémité basse/proche de la rampe
             if (zNear >= zFar) return;                     // Pas encore à l'horizon ou déjà derrière la caméra
 
-            // Découpage en 16 sous-segments pour dessiner une vraie courbure S-curve fluide et un profil arqué !
-            const steps = 16;
+            // Rampe normale (orange) = droite (2 segments suffisent !), Super Rampe (violette) = ondulée en S (12 segments fluides)
+            const steps = isMegaRamp ? 12 : 2;
             let pts = [];
             for (let i = 0; i <= steps; i++) {
                 let z = zNear + (i / steps) * (zFar - zNear);
@@ -2464,7 +2503,7 @@
 
             ctx.save();
 
-            // 1. Ombre portée courbée sur la neige sous toute la rampe
+            // 1. Ombre portée sur la neige sous toute la rampe
             ctx.fillStyle = "rgba(20, 45, 70, 0.26)";
             ctx.beginPath();
             for (let i = 0; i <= steps; i++) {
@@ -2481,9 +2520,9 @@
             ctx.closePath();
             ctx.fill();
 
-            // 2. Poteaux métalliques de soutien ancrés dans la neige le long de la courbe
+            // 2. Poteaux métalliques de soutien ancrés dans la neige
             ctx.strokeStyle = "#2c3e50";
-            const postIndices = isMegaRamp ? [0, 4, 8, 12, 16] : [0, 8, 16];
+            const postIndices = isMegaRamp ? [0, 3, 6, 9, 12] : [0, 1, 2];
             postIndices.forEach(idx => {
                 let pt = pts[idx];
                 if (!pt) return;
@@ -2577,7 +2616,7 @@
             let renderList = [];
 
             sideScenery.forEach(sc => { renderList.push(sc); });
-            obstacles.forEach(obs => { renderList.push({ ...obs, isObstacle: true }); });
+            obstacles.forEach(obs => { obs.isObstacle = true; renderList.push(obs); });
             
             // Marmotte placée en plein dans le mur de la pente
             renderList.push({ x: player.x, y: player.y, z: player.z, width: 270, height: 270, isPlayer: true });
@@ -2861,45 +2900,45 @@
 
             groundScroll += currentSpeed;
 
-            // --- GESTION DYNAMIQUE DES VIRAGES FLUIDES (SANS SACCADE) ---
+            // --- GESTION DYNAMIQUE DES VIRAGES FLUIDES ET ADOUCIS (SANS SACCADE) ---
             curveTimer--;
             if (curveTimer <= 0) {
-                // Alterne entre virage court, courbe moyenne, chicane ou courte ligne droite
+                // Alterne en douceur entre virage moyen, courbe légère ou portion droite
                 let rand = Math.random();
-                let sign = targetCurve >= 0 ? -1 : 1; // Favorise l'alternance gauche/droite (slalom)
+                let sign = targetCurve >= 0 ? -1 : 1; // Favorise l'alternance gauche/droite (slalom doux)
                 if (Math.random() < 0.25) sign *= -1;
 
-                if (rand < 0.35) {
-                    // Virage marqué et court
-                    targetCurve = sign * (0.95 + Math.random() * 0.45);
-                    curveTimer = 65 + Math.floor(Math.random() * 45);
-                    curveLerpSpeed = 0.022;
-                } else if (rand < 0.78) {
-                    // Virage moyen dynamique
-                    targetCurve = sign * (0.50 + Math.random() * 0.45);
-                    curveTimer = 80 + Math.floor(Math.random() * 60);
-                    curveLerpSpeed = 0.018;
+                if (rand < 0.32) {
+                    // Virage marqué mais adouci
+                    targetCurve = sign * (0.76 + Math.random() * 0.34);
+                    curveTimer = 80 + Math.floor(Math.random() * 50);
+                    curveLerpSpeed = 0.015;
+                } else if (rand < 0.76) {
+                    // Virage moyen tout en souplesse
+                    targetCurve = sign * (0.40 + Math.random() * 0.35);
+                    curveTimer = 95 + Math.floor(Math.random() * 65);
+                    curveLerpSpeed = 0.012;
                 } else if (rand < 0.92) {
-                    // Courbe douce un peu plus longue
-                    targetCurve = sign * (0.28 + Math.random() * 0.30);
-                    curveTimer = 110 + Math.floor(Math.random() * 65);
-                    curveLerpSpeed = 0.014;
+                    // Courbe très douce et longue
+                    targetCurve = sign * (0.20 + Math.random() * 0.24);
+                    curveTimer = 120 + Math.floor(Math.random() * 70);
+                    curveLerpSpeed = 0.010;
                 } else {
                     // Courte portion droite
                     targetCurve = 0;
-                    curveTimer = 50 + Math.floor(Math.random() * 45);
-                    curveLerpSpeed = 0.02;
+                    curveTimer = 60 + Math.floor(Math.random() * 50);
+                    curveLerpSpeed = 0.014;
                 }
             }
             // Double lissage exponentiel (targetCurve -> smoothCurve -> currentCurve) :
             // élimine totalement les changements brusques de direction et rend le virage soyeux !
             smoothCurve += (targetCurve - smoothCurve) * curveLerpSpeed;
-            currentCurve += (smoothCurve - currentCurve) * 0.04;
+            currentCurve += (smoothCurve - currentCurve) * 0.03;
 
             // Le décor en arrière-plan défile doucement quand on tourne !
-            bgScrollX += currentCurve * (currentSpeed * 0.07);
-            // Léger effet centrifuge progressif dans les virages
-            player.dx -= currentCurve * (currentSpeed * 0.012);
+            bgScrollX += currentCurve * (currentSpeed * 0.06);
+            // Léger effet centrifuge progressif et adouci dans les virages
+            player.dx -= currentCurve * (currentSpeed * 0.0095);
 
             // Vitesse de base légèrement augmentée (24.5 = ~54 km/h), et courbe d'accélération douce (0.008) !
             globalTargetSpeed = Math.min(88, 24.5 + (frames * 0.008));
@@ -3041,10 +3080,18 @@
             // Lorsque la marmotte saute et que ses skis sont enflammés (figure sur bosse ou glisse/figure sur rampe), la distance compte TRIPLE (x3) !
             let skisOnFireNow = !player.grounded && player.gliderTimer <= 0 && (((player.onMogulJump || player.onRampJump) && player.isDoingTrick && player.trickAngle > 0.25) || player.isGrindingRamp);
             score += (currentSpeed / 10) * (skisOnFireNow ? 3 : 1);
-            document.getElementById("score").innerText = Math.floor(score);
+            let roundedScore = Math.floor(score);
+            if (roundedScore !== lastDisplayedScore) {
+                lastDisplayedScore = roundedScore;
+                scoreDomEl.innerText = roundedScore;
+            }
             
             handleObstacles();
         }
+
+        const scoreDomEl = document.getElementById("score");
+        let lastDisplayedScore = -1;
+        let lastBodyPlayingState = null;
 
         function gameOver(reasonTitle, reasonDetail) {
             state = 'GAMEOVER';
@@ -3098,7 +3145,8 @@
             eagleAttackTimer = 0;
             eagle.x = 0; eagle.y = -595; eagle.z = 310; eagle.targetY = -595; eagle.targetZ = 310;
 
-            document.getElementById("score").innerText = "0";
+            lastDisplayedScore = 0;
+            scoreDomEl.innerText = "0";
         }
 
         function initGame() {
@@ -3114,10 +3162,18 @@
             startBackgroundMusic();
         }
 
+        let needsStaticRedraw = true;
         function gameLoop() {
-            document.body.classList.toggle('is-playing', state === 'PLAY');
-            if (state !== 'VIDEO') { // Dès que state = PLAY, on dessine en Haute Définition (1600x900)
-                frames++;
+            const isPlayingNow = (state === 'PLAY');
+            if (isPlayingNow !== lastBodyPlayingState) {
+                lastBodyPlayingState = isPlayingNow;
+                document.body.classList.toggle('is-playing', isPlayingNow);
+                needsStaticRedraw = true;
+            }
+            // On ne redessine à 60 FPS que pendant la partie ou l'attaque de l'aigle (évite de faire tourner le GPU à plein régime sous les écrans de règles/pause/fin) !
+            if (state === 'PLAY' || state === 'EAGLE_ATTACK' || (state !== 'VIDEO' && needsStaticRedraw)) {
+                if (state === 'PLAY' || state === 'EAGLE_ATTACK') frames++;
+                needsStaticRedraw = false;
                 ctx.setTransform(canvas.width / LOGIC_W, 0, 0, canvas.height / LOGIC_H, 0, 0);
                 ctx.clearRect(0, 0, LOGIC_W, LOGIC_H);
 
