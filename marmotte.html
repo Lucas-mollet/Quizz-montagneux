@@ -267,8 +267,8 @@
             </div>
         </div>
 
-        <!-- Rendu Haute Définition 1600x900 en plein écran (espace logique 800x450 conservé) -->
-        <canvas id="gameCanvas" width="1600" height="900"></canvas>
+        <!-- Rendu Haute Définition 1280x720 fluide à faible latence (espace logique 800x450 conservé) -->
+        <canvas id="gameCanvas" width="1280" height="720"></canvas>
 
         <div id="topHud">
             <div id="scoreBoard">Distance : <span id="score">0</span> m</div>
@@ -311,7 +311,7 @@
 
     <script>
         const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true }) || canvas.getContext("2d");
         const LOGIC_W = 800;
         const LOGIC_H = 450;
 
@@ -431,13 +431,30 @@
             playWithSoundBtn.style.display = "block";
         }
 
-        // --- IMAGES ---
+        // --- IMAGES & PRÉ-REDIMENSIONNEMENT EN MÉMOIRE (ÉVITE DE REDIMENSIONNER 2.2 Mo À CHAQUE FRAME !) ---
         const imgMarmotte = new Image(); imgMarmotte.src = "marmotte.png"; 
         const imgAigle = new Image(); imgAigle.src = "aigle.png"; 
 
         let imagesLoaded = { marmotte: false, aigle: false };
-        imgMarmotte.onload = () => { imagesLoaded.marmotte = true; };
-        imgAigle.onload = () => { imagesLoaded.aigle = true; };
+        let marmotteSprite = null;
+        let aigleSprite = null;
+
+        imgMarmotte.onload = () => {
+            const c = document.createElement("canvas");
+            c.width = 256; c.height = 256;
+            c.getContext("2d").drawImage(imgMarmotte, 0, 0, 256, 256);
+            marmotteSprite = c;
+            imagesLoaded.marmotte = true;
+            needsStaticRedraw = true;
+        };
+        imgAigle.onload = () => {
+            const c = document.createElement("canvas");
+            c.width = 432; c.height = 160;
+            c.getContext("2d").drawImage(imgAigle, 0, 0, 432, 160);
+            aigleSprite = c;
+            imagesLoaded.aigle = true;
+            needsStaticRedraw = true;
+        };
 
         // --- MATHS 3D : VUE ENCORE PLUS SURÉLEVÉE ET PENTE ENCORE PLUS RAIDE ---
         const FOV = 300; 
@@ -459,9 +476,9 @@
         let bgScrollX = 0;         // Parallaxe horizontale du décor quand la piste tourne
         let cameraX = 0;           // Position X de la caméra lissée (évite les à-coups !)
         
-        // --- GESTION DYNAMIQUE DE LA VITESSE (Vitesse de base légèrement augmentée, accélération douce) ---
-        let globalTargetSpeed = 24.5; // Départ un peu plus rapide (~54 km/h)
-        let currentSpeed = 24.5;
+        // --- GESTION DYNAMIQUE DE LA VITESSE (Départ plus rapide et dynamique dès le début, accélération douce) ---
+        let globalTargetSpeed = 33.0; // Départ plus rapide (~72 km/h) pour une vraie sensation de glisse immédiate !
+        let currentSpeed = 33.0;
         let landingBoostTimer = 0; // Légère accélération à la retombée d'un saut ou d'une rampe !
         let distSinceLastObstacle = 800; // Spawn direct
         let distSinceLastScenery = 0;    // Pour les chalets et sapins enneigés hors-piste
@@ -768,172 +785,195 @@
             return { x: projX, y: projY, scale: scale };
         }
 
-        // --- DÉCOR RICHE : CIEL ALPIN, MASSIFS ROCHEUX ET PLAINE ENNEIGÉE EN CONTREBAS ---
-        function drawComplexBackground() {
-            let valleyBottomY = 165; // Jonction haute avec la crête de la piste pour maximiser le mur de pente !
+        // --- CACHE PRÉ-RENDU DU PAYSAGE ALPIN ET DES DÉGRADÉS (ZÉRO RECALCUL VECTORIEL À CHAQUE FRAME !) ---
+        let bgCache = null;
+        let cachedSnowBaseGrad = null;
 
-            // 1. Ciel alpin lumineux
-            let skyGradient = ctx.createLinearGradient(0, 0, 0, 120);
-            skyGradient.addColorStop(0, '#09304e'); 
-            skyGradient.addColorStop(0.45, '#2980b9');
-            skyGradient.addColorStop(0.85, '#74b9ff'); 
-            skyGradient.addColorStop(1, '#dff9fb'); 
-            ctx.fillStyle = skyGradient;
-            ctx.fillRect(0, 0, LOGIC_W, 120);
+        function ensureBackgroundCache() {
+            if (bgCache) return bgCache;
+            let valleyBottomY = 165;
 
-            // On remonte encore l'horizon montagneux et la plaine (-82px) pour accompagner la pente accrue !
-            ctx.save();
-            ctx.translate(0, -82);
+            // 1. Dégradé fixe du ciel
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, 120);
+            skyGrad.addColorStop(0, '#09304e'); 
+            skyGrad.addColorStop(0.45, '#2980b9');
+            skyGrad.addColorStop(0.85, '#74b9ff'); 
+            skyGrad.addColorStop(1, '#dff9fb');
 
-            // Soleil d'altitude et halo doux
-            let sunX = 650 - bgScrollX * 0.15;
-            let sunGrad = ctx.createRadialGradient(sunX, 46, 5, sunX, 46, 68);
+            // 2. Soleil pré-rendu (140x140)
+            let sunCanvas = document.createElement("canvas");
+            sunCanvas.width = 140; sunCanvas.height = 140;
+            let sCtx = sunCanvas.getContext("2d");
+            let sunGrad = sCtx.createRadialGradient(70, 70, 5, 70, 70, 68);
             sunGrad.addColorStop(0, 'rgba(255, 250, 220, 0.95)');
             sunGrad.addColorStop(0.3, 'rgba(255, 235, 160, 0.45)');
             sunGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            ctx.fillStyle = sunGrad;
-            ctx.beginPath(); ctx.arc(sunX, 46, 68, 0, Math.PI*2); ctx.fill();
+            sCtx.fillStyle = sunGrad;
+            sCtx.beginPath(); sCtx.arc(70, 70, 68, 0, Math.PI * 2); sCtx.fill();
 
-            // 2. Chaîne de montagnes lointaines (enneigées et bleutées par la brume)
-            let farShift = (bgScrollX * 0.3) % 800;
+            // 3. Tuile répétable (800px) des montagnes lointaines
+            let farCanvas = document.createElement("canvas");
+            farCanvas.width = 800; farCanvas.height = 150;
+            let fCtx = farCanvas.getContext("2d");
+            fCtx.fillStyle = "#5f85a8";
+            fCtx.beginPath();
+            fCtx.moveTo(0, 132);
+            fCtx.lineTo(90, 48); fCtx.lineTo(190, 90); fCtx.lineTo(310, 34);
+            fCtx.lineTo(440, 84); fCtx.lineTo(570, 40); fCtx.lineTo(700, 78);
+            fCtx.lineTo(800, 132);
+            fCtx.closePath();
+            fCtx.fill();
+            fCtx.fillStyle = "#89aecb";
+            [[90, 48, 190, 90], [310, 34, 440, 84], [570, 40, 700, 78]].forEach(pk => {
+                fCtx.beginPath();
+                fCtx.moveTo(pk[0], pk[1]);
+                fCtx.lineTo(pk[2], pk[3]);
+                fCtx.lineTo(pk[0] + 15, 132);
+                fCtx.closePath();
+                fCtx.fill();
+            });
+
+            // 4. Tuile répétable (800px) des massifs intermédiaires et glaciers
+            let midCanvas = document.createElement("canvas");
+            midCanvas.width = 800; midCanvas.height = 150;
+            let mCtx = midCanvas.getContext("2d");
+            mCtx.fillStyle = "#2c4760";
+            mCtx.beginPath();
+            mCtx.moveTo(0, 138);
+            mCtx.lineTo(130, 58); mCtx.lineTo(260, 108); mCtx.lineTo(420, 46);
+            mCtx.lineTo(560, 104); mCtx.lineTo(680, 64); mCtx.lineTo(800, 138);
+            mCtx.closePath();
+            mCtx.fill();
+            [[130, 58, 210, 108], [420, 46, 520, 104], [680, 64, 770, 124]].forEach(pk => {
+                mCtx.fillStyle = "#3f6280";
+                mCtx.beginPath();
+                mCtx.moveTo(pk[0], pk[1]);
+                mCtx.lineTo(pk[2], pk[3]);
+                mCtx.lineTo(pk[0] - 10, 138);
+                mCtx.closePath();
+                mCtx.fill();
+
+                mCtx.fillStyle = "#f5f9fc";
+                mCtx.beginPath();
+                mCtx.moveTo(pk[0], pk[1]);
+                mCtx.lineTo(pk[0] - 28, pk[1] + 28);
+                mCtx.lineTo(pk[0] - 8, pk[1] + 20);
+                mCtx.lineTo(pk[0] + 5, pk[1] + 32);
+                mCtx.lineTo(pk[0] + 32, pk[1] + 24);
+                mCtx.closePath();
+                mCtx.fill();
+            });
+
+            // 5. Tuile répétable (800px) de la plaine, rivière, village et sapins
+            let plainCanvas = document.createElement("canvas");
+            plainCanvas.width = 800; plainCanvas.height = 185;
+            let pCtx = plainCanvas.getContext("2d");
+            let plainGrad = pCtx.createLinearGradient(0, 130, 0, valleyBottomY);
+            plainGrad.addColorStop(0, "#8ab088");
+            plainGrad.addColorStop(0.35, "#5c9468");
+            plainGrad.addColorStop(0.70, "#b8d8d8");
+            plainGrad.addColorStop(1, "#eaf4fc");
+            pCtx.fillStyle = plainGrad;
+            pCtx.fillRect(0, 130, 800, valleyBottomY - 130);
+
             for (let rep = -1; rep <= 1; rep++) {
-                let ox = rep * 800 - farShift;
-                ctx.fillStyle = "#5f85a8";
-                ctx.beginPath();
-                ctx.moveTo(ox, 132);
-                ctx.lineTo(ox + 90, 48); ctx.lineTo(ox + 190, 90); ctx.lineTo(ox + 310, 34);
-                ctx.lineTo(ox + 440, 84); ctx.lineTo(ox + 570, 40); ctx.lineTo(ox + 700, 78);
-                ctx.lineTo(ox + 800, 132);
-                ctx.closePath();
-                ctx.fill();
+                let ox = rep * 800;
+                pCtx.fillStyle = "rgba(235, 246, 255, 0.85)";
+                pCtx.beginPath();
+                pCtx.ellipse(ox + 140, 154, 130, 14, 0.04, 0, Math.PI * 2);
+                pCtx.ellipse(ox + 490, 158, 165, 16, -0.03, 0, Math.PI * 2);
+                pCtx.ellipse(ox + 730, 150, 110, 12, 0.02, 0, Math.PI * 2);
+                pCtx.fill();
 
-                // Faces éclairées des montagnes lointaines
-                ctx.fillStyle = "#89aecb";
-                [[90, 48, 190, 90], [310, 34, 440, 84], [570, 40, 700, 78]].forEach(pk => {
-                    ctx.beginPath();
-                    ctx.moveTo(ox + pk[0], pk[1]);
-                    ctx.lineTo(ox + pk[2], pk[3]);
-                    ctx.lineTo(ox + pk[0] + 15, 132);
-                    ctx.closePath();
-                    ctx.fill();
-                });
+                pCtx.fillStyle = "rgba(95, 155, 95, 0.55)";
+                pCtx.beginPath();
+                pCtx.ellipse(ox + 310, 146, 120, 12, -0.04, 0, Math.PI * 2);
+                pCtx.ellipse(ox + 640, 144, 110, 10, 0.03, 0, Math.PI * 2);
+                pCtx.fill();
             }
 
-            // 3. Massifs alpins intermédiaires avec faces ombragées et glaciers
-            let midShift = (bgScrollX * 0.6) % 800;
-            for (let rep = -1; rep <= 1; rep++) {
-                let ox = rep * 800 - midShift;
-                ctx.fillStyle = "#2c4760";
-                ctx.beginPath();
-                ctx.moveTo(ox, 138);
-                ctx.lineTo(ox + 130, 58); ctx.lineTo(ox + 260, 108); ctx.lineTo(ox + 420, 46);
-                ctx.lineTo(ox + 560, 104); ctx.lineTo(ox + 680, 64); ctx.lineTo(ox + 800, 138);
-                ctx.closePath();
-                ctx.fill();
+            pCtx.strokeStyle = "#74b9ff";
+            pCtx.lineWidth = 3.5;
+            pCtx.beginPath();
+            pCtx.moveTo(80, 131);
+            pCtx.bezierCurveTo(180, 144, 40, 156, 160, 174);
+            pCtx.stroke();
+            pCtx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+            pCtx.lineWidth = 1.5;
+            pCtx.stroke();
 
-                [[130, 58, 210, 108], [420, 46, 520, 104], [680, 64, 770, 124]].forEach(pk => {
-                    ctx.fillStyle = "#3f6280";
-                    ctx.beginPath();
-                    ctx.moveTo(ox + pk[0], pk[1]);
-                    ctx.lineTo(ox + pk[2], pk[3]);
-                    ctx.lineTo(ox + pk[0] - 10, 138);
-                    ctx.closePath();
-                    ctx.fill();
+            let vx = 380, vy = 146;
+            [[-28, 4], [-14, 7], [12, 6], [26, 3], [-5, 10]].forEach(ch => {
+                pCtx.fillStyle = "#d35400";
+                pCtx.fillRect(vx + ch[0], vy + ch[1], 7, 5);
+                pCtx.fillStyle = "#ffffff";
+                pCtx.beginPath();
+                pCtx.moveTo(vx + ch[0] - 1.5, vy + ch[1]);
+                pCtx.lineTo(vx + ch[0] + 3.5, vy + ch[1] - 4.5);
+                pCtx.lineTo(vx + ch[0] + 8.5, vy + ch[1]);
+                pCtx.fill();
+            });
+            pCtx.fillStyle = "#f5f6fa";
+            pCtx.fillRect(vx, vy - 2, 5, 10);
+            pCtx.fillStyle = "#2c3e50";
+            pCtx.beginPath(); pCtx.moveTo(vx - 1, vy - 2); pCtx.lineTo(vx + 2.5, vy - 12); pCtx.lineTo(vx + 6, vy - 2); pCtx.fill();
 
-                    ctx.fillStyle = "#f5f9fc";
-                    ctx.beginPath();
-                    ctx.moveTo(ox + pk[0], pk[1]);
-                    ctx.lineTo(ox + pk[0] - 28, pk[1] + 28);
-                    ctx.lineTo(ox + pk[0] - 8, pk[1] + 20);
-                    ctx.lineTo(ox + pk[0] + 5, pk[1] + 32);
-                    ctx.lineTo(ox + pk[0] + 32, pk[1] + 24);
-                    ctx.closePath();
-                    ctx.fill();
-                });
+            pCtx.fillStyle = "#1b4332";
+            pCtx.beginPath();
+            for (let tx = 0; tx < 800; tx += 20) {
+                let th = 9 + (tx * 7 % 7);
+                let ty = 164 + (tx * 3 % 9);
+                pCtx.moveTo(tx, ty - th);
+                pCtx.lineTo(tx - 5, ty);
+                pCtx.lineTo(tx + 5, ty);
             }
+            pCtx.fill();
 
-            // 4. LA PLAINE EN BAS DE LA VALLÉE (Mélange de prairies alpines ET de manteau neigeux hivernal !)
-            let plainGrad = ctx.createLinearGradient(0, 130, 0, valleyBottomY);
-            plainGrad.addColorStop(0, "#8ab088");   // Fond de vallée
-            plainGrad.addColorStop(0.35, "#5c9468"); // Prairies d'altitude
-            plainGrad.addColorStop(0.70, "#b8d8d8"); // Transition givrée
-            plainGrad.addColorStop(1, "#eaf4fc");   // Plaine enneigée au pied de la piste
-            ctx.fillStyle = plainGrad;
-            ctx.fillRect(0, 130, LOGIC_W, valleyBottomY - 130);
-
-            let plainShift = (bgScrollX * 0.85) % 800;
-            for (let rep = -1; rep <= 1; rep++) {
-                let ox = rep * 800 - plainShift;
-
-                // Grandes collines et combes enneigées dans la plaine en bas !
-                ctx.fillStyle = "rgba(235, 246, 255, 0.85)";
-                ctx.beginPath();
-                ctx.ellipse(ox + 140, 154, 130, 14, 0.04, 0, Math.PI * 2);
-                ctx.ellipse(ox + 490, 158, 165, 16, -0.03, 0, Math.PI * 2);
-                ctx.ellipse(ox + 730, 150, 110, 12, 0.02, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Collines d'alpage vertes qui alternent avec la neige
-                ctx.fillStyle = "rgba(95, 155, 95, 0.55)";
-                ctx.beginPath();
-                ctx.ellipse(ox + 310, 146, 120, 12, -0.04, 0, Math.PI * 2);
-                ctx.ellipse(ox + 640, 144, 110, 10, 0.03, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Rivière glacée qui serpente au fond de la plaine
-                ctx.strokeStyle = "#74b9ff";
-                ctx.lineWidth = 3.5;
-                ctx.beginPath();
-                ctx.moveTo(ox + 80, 131);
-                ctx.bezierCurveTo(ox + 180, 144, ox + 40, 156, ox + 160, 174);
-                ctx.stroke();
-                // Berges enneigées de la rivière
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-
-                // Petit village alpin sous la neige au creux de la vallée
-                let vx = ox + 380, vy = 146;
-                [[-28, 4], [-14, 7], [12, 6], [26, 3], [-5, 10]].forEach(ch => {
-                    ctx.fillStyle = "#d35400"; // Façades bois
-                    ctx.fillRect(vx + ch[0], vy + ch[1], 7, 5);
-                    // Toits couverts de neige blanche !
-                    ctx.fillStyle = "#ffffff";
-                    ctx.beginPath();
-                    ctx.moveTo(vx + ch[0] - 1.5, vy + ch[1]);
-                    ctx.lineTo(vx + ch[0] + 3.5, vy + ch[1] - 4.5);
-                    ctx.lineTo(vx + ch[0] + 8.5, vy + ch[1]);
-                    ctx.fill();
-                });
-                // Clocher du village
-                ctx.fillStyle = "#f5f6fa";
-                ctx.fillRect(vx, vy - 2, 5, 10);
-                ctx.fillStyle = "#2c3e50";
-                ctx.beginPath(); ctx.moveTo(vx - 1, vy - 2); ctx.lineTo(vx + 2.5, vy - 12); ctx.lineTo(vx + 6, vy - 2); ctx.fill();
-
-                // Lisière de sapins enneigés tout en bas de la vallée (tracés regroupés pour une fluidité maximale !)
-                ctx.fillStyle = "#1b4332";
-                ctx.beginPath();
-                for (let tx = 0; tx < 800; tx += 20) {
-                    let th = 9 + (tx * 7 % 7);
-                    let ty = 164 + (tx * 3 % 9);
-                    ctx.moveTo(ox + tx, ty - th);
-                    ctx.lineTo(ox + tx - 5, ty);
-                    ctx.lineTo(ox + tx + 5, ty);
-                }
-                ctx.fill();
-
-                ctx.fillStyle = "#ecf0f1";
-                ctx.beginPath();
-                for (let tx = 0; tx < 800; tx += 20) {
-                    let th = 9 + (tx * 7 % 7);
-                    let ty = 164 + (tx * 3 % 9);
-                    ctx.moveTo(ox + tx, ty - th);
-                    ctx.lineTo(ox + tx - 2.5, ty - th * 0.5);
-                    ctx.lineTo(ox + tx + 2.5, ty - th * 0.5);
-                }
-                ctx.fill();
+            pCtx.fillStyle = "#ecf0f1";
+            pCtx.beginPath();
+            for (let tx = 0; tx < 800; tx += 20) {
+                let th = 9 + (tx * 7 % 7);
+                let ty = 164 + (tx * 3 % 9);
+                pCtx.moveTo(tx, ty - th);
+                pCtx.lineTo(tx - 2.5, ty - th * 0.5);
+                pCtx.lineTo(tx + 2.5, ty - th * 0.5);
             }
+            pCtx.fill();
+
+            bgCache = { skyGrad, sunCanvas, farCanvas, midCanvas, plainCanvas };
+            return bgCache;
+        }
+
+        // --- DÉCOR RICHE : CIEL ALPIN, MASSIFS ROCHEUX ET PLAINE ENNEIGÉE EN CONTREBAS (ULTRA-RAPIDE VIA CACHE) ---
+        function drawComplexBackground() {
+            const cache = ensureBackgroundCache();
+
+            // 1. Ciel alpin lumineux
+            ctx.fillStyle = cache.skyGrad;
+            ctx.fillRect(0, 0, LOGIC_W, 120);
+
+            ctx.save();
+            ctx.translate(0, -82);
+
+            // Soleil d'altitude
+            let sunX = 650 - bgScrollX * 0.15;
+            ctx.drawImage(cache.sunCanvas, sunX - 70, 46 - 70);
+
+            // 2. Chaîne de montagnes lointaines
+            let farShift = ((bgScrollX * 0.3) % 800 + 800) % 800;
+            ctx.drawImage(cache.farCanvas, -farShift, 0);
+            ctx.drawImage(cache.farCanvas, 800 - farShift, 0);
+
+            // 3. Massifs alpins intermédiaires
+            let midShift = ((bgScrollX * 0.6) % 800 + 800) % 800;
+            ctx.drawImage(cache.midCanvas, -midShift, 0);
+            ctx.drawImage(cache.midCanvas, 800 - midShift, 0);
+
+            // 4. Plaine, rivière, village et sapins
+            let plainShift = ((bgScrollX * 0.85) % 800 + 800) % 800;
+            ctx.drawImage(cache.plainCanvas, -plainShift, 0);
+            ctx.drawImage(cache.plainCanvas, 800 - plainShift, 0);
+
             ctx.restore();
         }
 
@@ -941,12 +981,14 @@
             const zFar = 4500;
             const steps = 26;
 
-            // 1. Fond de neige poudreuse lisse (remonte jusqu'à Y=66 pour suivre la pente encore plus raide !)
-            let snowBaseGrad = ctx.createLinearGradient(0, 66, 0, LOGIC_H);
-            snowBaseGrad.addColorStop(0, "#d4e6f9");   // Haut/fond de la pente ombragé
-            snowBaseGrad.addColorStop(0.35, "#e8f3fe"); // Milieu de pente
-            snowBaseGrad.addColorStop(1, "#ffffff");   // Neige fraîche éclatante sous les skis
-            ctx.fillStyle = snowBaseGrad;
+            // 1. Fond de neige poudreuse lisse (dégradé mis en cache une seule fois !)
+            if (!cachedSnowBaseGrad) {
+                cachedSnowBaseGrad = ctx.createLinearGradient(0, 66, 0, LOGIC_H);
+                cachedSnowBaseGrad.addColorStop(0, "#d4e6f9");
+                cachedSnowBaseGrad.addColorStop(0.35, "#e8f3fe");
+                cachedSnowBaseGrad.addColorStop(1, "#ffffff");
+            }
+            ctx.fillStyle = cachedSnowBaseGrad;
             ctx.fillRect(0, 66, LOGIC_W, LOGIC_H - 66);
 
             // Calcul unique des bords gauche et droit de la piste (réutilisé pour le couloir et les filets !)
@@ -2611,6 +2653,31 @@
             ctx.restore();
         }
 
+        // --- CACHE DE SPRITES PRÉ-RENDUS POUR LES OBSTACLES & DÉCORS (SAPINS, CHALETS, ROCHERS, RONDINS, HERBE) ---
+        const obstacleSpriteCache = {};
+        function drawCachedObstacleSprite(ctx, key, vw, vh, minXRatio, maxXRatio, minYRatio, maxYRatio, refW, refH, renderFn) {
+            let entry = obstacleSpriteCache[key];
+            if (!entry) {
+                let c = document.createElement("canvas");
+                let wRatio = maxXRatio - minXRatio;
+                let hRatio = maxYRatio - minYRatio;
+                c.width = Math.ceil(refW * wRatio);
+                c.height = Math.ceil(refH * hRatio);
+                let oCtx = c.getContext("2d");
+                oCtx.translate(-minXRatio * refW, -minYRatio * refH);
+                renderFn(oCtx, refW, refH);
+                entry = { canvas: c, minXRatio, minYRatio, wRatio, hRatio };
+                obstacleSpriteCache[key] = entry;
+            }
+            ctx.drawImage(
+                entry.canvas,
+                vw * entry.minXRatio,
+                vh * entry.minYRatio,
+                vw * entry.wRatio,
+                vh * entry.hRatio
+            );
+        }
+
         // --- DESSIN ENTITÉS ---
         function drawEntities() {
             let renderList = [];
@@ -2689,19 +2756,25 @@
                 ctx.translate(p.x, p.y);
 
                 if (item.isScenery) {
-                    if (item.type === "snowTree") drawSnowyPine(ctx, vw, vh);
-                    else if (item.type === "chalet") drawAlpineChalet(ctx, vw, vh);
+                    if (item.type === "snowTree") {
+                        drawCachedObstacleSprite(ctx, "snowTree", vw, vh, -0.58, 0.58, -1.08, 0.16, 220, 340, drawSnowyPine);
+                    } else if (item.type === "chalet") {
+                        drawCachedObstacleSprite(ctx, "chalet", vw, vh, -0.56, 0.56, -1.06, 0.18, 340, 260, drawAlpineChalet);
+                    }
                 }
 
                 if (item.isObstacle) {
                     if (item.type === "tree") {
-                        drawSnowyPine(ctx, vw, vh);
+                        drawCachedObstacleSprite(ctx, "snowTree", vw, vh, -0.58, 0.58, -1.08, 0.16, 220, 340, drawSnowyPine);
                     } else if (item.type === "log") {
-                        drawFallenLog(ctx, vw, vh);
+                        drawCachedObstacleSprite(ctx, "log", vw, vh, -0.56, 0.56, -1.35, 0.32, 320, 75, drawFallenLog);
                     } else if (item.type === "rock") {
-                        drawAlpineRock(ctx, vw, vh, item.shape);
+                        let sh = item.shape || 0;
+                        drawCachedObstacleSprite(ctx, "rock_" + sh, vw, vh, -0.56, 0.56, -1.08, 0.18, 220, 140, (c, w, h) => drawAlpineRock(c, w, h, sh));
                     } else if (item.type === "grass") {
-                        drawAlpineGrassPatch(ctx, vw, vh, item.shape);
+                        let sh = item.shape || 0;
+                        let effVh = Math.max(3, vh);
+                        drawCachedObstacleSprite(ctx, "grass_" + sh, vw, effVh, -0.56, 0.56, -3.1, 2.6, 480, 18, (c, w, h) => drawAlpineGrassPatch(c, w, h, sh));
                     } else if (item.type === "animalCard" || item.type === "skyAnimalCard") {
                         // Dessin de l'item "Carte Animal" (🐾) inspiré du dos de carte Animal du site principal !
                         let bob = Math.sin(frames * 0.1 + item.z * 0.01) * (vh * 0.12);
@@ -2785,9 +2858,9 @@
                     drawDetailedSki(ctx, -vw * 0.13 + trickShiftX, vw, vh, skiTurn, skisOnFire);
                     drawDetailedSki(ctx,  vw * 0.13 + trickShiftX, vw, vh, skiTurn, skisOnFire);
                     
-                    // 2. Dessiner la marmotte par-dessus ses fixations de skis
-                    if (imagesLoaded.marmotte && imgMarmotte.naturalWidth > 0) {
-                        ctx.drawImage(imgMarmotte, -vw/2, -vh, vw, vh);
+                    // 2. Dessiner la marmotte par-dessus ses fixations de skis (via sprite pré-redimensionné en mémoire !)
+                    if (imagesLoaded.marmotte && (marmotteSprite || imgMarmotte.naturalWidth > 0)) {
+                        ctx.drawImage(marmotteSprite || imgMarmotte, -vw/2, -vh, vw, vh);
                     } else {
                         ctx.fillStyle = "#8e6e46";
                         ctx.beginPath(); ctx.ellipse(0, -vh*0.45, vw*0.28, vh*0.38, 0, 0, Math.PI*2); ctx.fill();
@@ -2833,8 +2906,8 @@
                     let groundEagle = project(item.x, 0, item.z);
                     ctx.fillStyle = "rgba(0,0,0,0.3)";
                     ctx.beginPath(); ctx.ellipse(0, groundEagle.y - p.y, vw*0.22, vw*0.05, 0, 0, Math.PI*2); ctx.fill();
-                    if (imagesLoaded.aigle && imgAigle.naturalWidth > 0) {
-                        ctx.drawImage(imgAigle, -vw/2, -vh/2, vw, vh);
+                    if (imagesLoaded.aigle && (aigleSprite || imgAigle.naturalWidth > 0)) {
+                        ctx.drawImage(aigleSprite || imgAigle, -vw/2, -vh/2, vw, vh);
                     } else {
                         ctx.fillStyle = "#2c3e50";
                         ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-vw/2, -vh*0.3); ctx.lineTo(-vw*0.15, -vh*0.1); ctx.lineTo(0, vh*0.15); ctx.lineTo(vw*0.15, -vh*0.1); ctx.lineTo(vw/2, -vh*0.3); ctx.closePath(); ctx.fill();
@@ -2940,10 +3013,10 @@
             // Léger effet centrifuge progressif et adouci dans les virages
             player.dx -= currentCurve * (currentSpeed * 0.0095);
 
-            // Vitesse de base légèrement augmentée (24.5 = ~54 km/h), et courbe d'accélération douce (0.008) !
-            globalTargetSpeed = Math.min(88, 24.5 + (frames * 0.008));
-            // La maniabilité augmente légèrement avec la vitesse pour rester jouable à haute vitesse
-            player.acc = 4.5 + (currentSpeed - 24.5) * 0.04;
+            // Vitesse de base plus rapide dès le début (33.0 = ~72 km/h), et courbe d'accélération progressive (0.008) !
+            globalTargetSpeed = Math.min(90, 33.0 + (frames * 0.008));
+            // La maniabilité accompagne cette vitesse de départ plus dynamique
+            player.acc = 4.9 + (currentSpeed - 33.0) * 0.04;
 
             if (keys.left) player.dx -= player.acc;
             if (keys.right) player.dx += player.acc;
@@ -3108,7 +3181,7 @@
         function prepareGameWorld() {
             frames = 0; score = 0; groundScroll = 0; distSinceLastObstacle = 900; distSinceLastScenery = 0; grassTouches = 0; 
             tricksLanded = 0; cardsCollected = 0; groundCardSpawnedThisRun = false; trickTextPopups = [];
-            globalTargetSpeed = 24.5; currentSpeed = 24.5; landingBoostTimer = 0;
+            globalTargetSpeed = 33.0; currentSpeed = 33.0; landingBoostTimer = 0;
             currentCurve = 0; smoothCurve = 0; targetCurve = 0.75; curveLerpSpeed = 0.02; curveTimer = 85; bgScrollX = 0; cameraX = 0;
             obstacles = []; sideScenery = []; particles = []; windLines = []; skiTracks = [];
             initSnowTexture();
